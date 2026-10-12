@@ -89,7 +89,7 @@ Part A (architecture) on Fable 5.1 -> Part B (build) and Part C (handoff) on Opu
 The session must stop and ask Dustin to switch models; it cannot switch itself.
 
 ## Next session starts here
-1. Session 1 (home PC, 2026-10-11) is done: mock-mode agent works end to end; 221 tests pass. Full context in `HANDOFF.md`.
+1. Session 1 (home PC, 2026-10-11) is done: mock-mode agent, optional LangSmith, and a mock Slack bot; 221 tests pass. Full context in `HANDOFF.md`; paste-ready prompts in `docs/session-prompts.md`.
 2. Setup: `uv sync`, `cp .env.example .env`, `uv run pytest -q`, then `uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"`.
 3. Before any live work: read the Coach Net API contract + XMLs in the work repo and replace the placeholder Case field names (HANDOFF section 4, items 1, 2, 11, 12).
 4. Next build step is Phase 2: live `get_sf_case` against a sandbox with a read-only integration user (HANDOFF section 7, with its security checks).

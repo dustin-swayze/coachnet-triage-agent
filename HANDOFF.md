@@ -9,6 +9,8 @@ produced this repo. Everything it needs is here or linked from here.
 Open the cloned repo folder in the Claude Desktop app (Code tab), set the model picker
 to **Opus 5.5**, and paste:
 
+> A fuller version of this prompt, with setup commands, is in `docs/session-prompts.md` (prompt B).
+>
 > `Read HANDOFF.md and CLAUDE.md, then run the "Next session starts here" checklist in HANDOFF.md section 9. Before Phase 2, read the Coach Net API contract and XMLs in the work repo and propose the exact field mapping. Ask me before touching any credentials.`
 
 ---
@@ -281,8 +283,9 @@ try `claude-haiku-5-5` once Phase 5 evals exist and keep whichever passes.
 
 - [ ] Clone, `uv sync`, `cp .env.example .env`, `uv run pytest -q` passes (section 5).
 - [ ] Mock demo runs: `uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"`.
-- [ ] Team lead confirms GitHub location, AI-tool policy, and whether LangSmith may receive redacted case data; push to TrxNow GitHub; delete the personal bridge repo (section 6).
+- [ ] Team lead confirms GitHub location, AI-tool policy, Anthropic as provider, whether LangSmith may receive redacted case data, and a TrxNow Slack app (admin approval, case details in Slack, hosting); push to TrxNow GitHub; delete the personal bridge repo (section 6).
 - [ ] Read the Coach Net API contract and XMLs; write the real field mapping into `.env.example` and `config.py`; close open items 1, 2, 11, 12.
 - [ ] Request the sandbox read-only integration user and Anypoint view-only connected app.
 - [ ] Phase 2: live `get_sf_case` against the sandbox, with its security checks and acceptance criteria.
+- [ ] Optional: run the mock Slack bot in a personal demo workspace (`docs/slack-setup.md`) for the pitch; never with TrxNow tokens until approved.
 - [ ] Update `docs/roadmap.md` statuses and the "Next session starts here" note in `CLAUDE.md` at the end of the session.

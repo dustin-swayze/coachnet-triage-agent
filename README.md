@@ -272,6 +272,7 @@ scenario per seed runbook entry, plus the LangSmith flag, the Slack bot (access,
 health alerts, and the CLI.
 
 ## Docs
+- [docs/session-prompts.md](docs/session-prompts.md) - paste-ready prompts to resume at home or start on the work laptop
 - [docs/slack-setup.md](docs/slack-setup.md) - Slack bot setup for the mock demo
 - [docs/overview.html](docs/overview.html) - wiki-style architecture overview and catalogue of everything built
 - [docs/decisions/](docs/decisions/) - ADRs
