@@ -9,7 +9,7 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 
 ## Observability (added 2026-10-11)
 - [x] Optional LangSmith tracing behind `LANGSMITH_ENABLED` (off by default, ADR 0006)
-- [ ] Local trace viewer / `triage stats` over the JSONL files (cost, latency, outcomes)
+- [-] Local trace viewer / `triage stats` over the JSONL files (deferred 2026-10-11 by Dustin; revisit after go-live)
 - [ ] Work dashboard: ship JSONL run summaries to Azure Monitor / Log Analytics (with Phase 6 hosting)
 
 ## Phase 2 - Live `get_sf_case` against a sandbox (work laptop)  <- NEXT
