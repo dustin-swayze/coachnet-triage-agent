@@ -1,0 +1,24 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# derived artifacts (rebuild with: uv run python -m triage index)
+data/index/
+.chroma/
+
+# run traces (JSONL, may contain redacted-but-real data once live)
+traces/*.jsonl
+
+# tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
