@@ -39,3 +39,9 @@ searchable by the agent.
   section with the title prepended to each chunk.
 - Tests assert that each seed entry is the top hit for its own "what the user
   reports" symptoms. That is a retrieval sanity check, not an eval.
+
+## Amendment (Session 1 Part B)
+The default embedder is `HashingEmbeddings` (lexical, free, deterministic; see ADR 0003).
+For a runbook of under ~50 entries it is likely good enough in live mode too.
+Anthropic has no embeddings API, so a semantic embedder means Voyage or OpenAI; that
+choice is `TODO(dustin)` and is gated on Phase 5 eval results, not taste.

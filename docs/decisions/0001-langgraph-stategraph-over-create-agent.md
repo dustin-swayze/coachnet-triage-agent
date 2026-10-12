@@ -48,3 +48,20 @@ and that loop is bounded by a step cap held in state.
   (`search_runbook`) in v1.
 - We still use LangChain 1.x for building blocks: `init_chat_model` (provider swap),
   `@tool` with Pydantic args, and the vector store integration.
+
+## Amendments made during the build (Session 1 Part B)
+- **`respond` renders a template; it is not an LLM call.** The model's prose already
+  lives in the structured `Diagnosis` (summary, cause, fix, confidence). Rendering it
+  in code saves one model call per run and guarantees that the evidence list, the
+  confidence, and the `INCOMPLETE` banner are always present and accurate.
+- **No-evidence route.** A conditional edge after `find_transaction` goes straight to
+  `respond` when there is no case *and* no log transaction (not found, scoped out,
+  timed out). With zero evidence, any runbook match would be a guess. The answer says
+  what was looked up and what failed.
+- **"Final answer as a tool."** In `diagnose`, the model gets two tools:
+  `search_runbook` and `Diagnosis`. It loops on searches and finishes by calling
+  `Diagnosis`. A plain-text reply gets one structured-output conversion. This keeps
+  the loop exit explicit and the output typed, on any provider.
+- **Deterministic guards after LLM steps.** Identifiers the model extracts must appear
+  verbatim in the user's text. Runbook ids it cites must have been returned by
+  `search_runbook` in this run; unknown ids are dropped and confidence is capped.

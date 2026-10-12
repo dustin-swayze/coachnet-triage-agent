@@ -68,3 +68,18 @@ oversell.
 - Adding a tool means: schema -> interface -> mock + fixture -> live -> test.
 - Fixture data is synthetic. Realistic *shapes*, invented *values*. Reviewed before
   any commit (constraint 3).
+
+## Amendments made during the build (Session 1 Part B)
+- **Mock responders read the real prompt.** The scripted model's default responders
+  parse the same `<evidence>` JSON and tool results a real model receives, and turn
+  them into tool calls and a `Diagnosis` with simple heuristics. Scenario tests can
+  override any node's responder with a fixed script or a callable.
+- **Fake embeddings are a hashing bag-of-words embedder, not random vectors.**
+  LangChain's `DeterministicFakeEmbedding` returns hash-seeded random vectors, so
+  retrieval with it is meaningless and mock-mode scenario tests would test nothing.
+  `HashingEmbeddings` is still free and deterministic, but lexically meaningful: error
+  codes such as `MULE:EXPRESSION` and `429` are kept as tokens. That makes mock-mode
+  retrieval a real (lexical) test of the runbook text.
+- **Timeouts use a worker pool.** Tool and model calls run in a thread pool so the
+  graph can stop waiting after `TOOL_TIMEOUT_SECONDS` or when the run budget is spent.
+  Python cannot kill a thread, so live tools must also set HTTP-level timeouts.

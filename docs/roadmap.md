@@ -62,3 +62,7 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 | 6 | `docs/runbook/*` | Each seed entry has placeholder log text and fix steps. Replace with real wording (synthetic values, real shapes) once the log format is known. |
 | 7 | `docs/runbook/02-*` | How the Priority Queue is checked today (object, field, or report). |
 | 8 | `config.py` | Confirm Anthropic as the live provider under TrxNow policy (Dustin says yes; confirm with team lead). |
+| 9 | `config.py`, ADR 0004 | Live embeddings provider: keep local hashing embeddings, or Voyage / OpenAI per policy. Decide with Phase 5 eval results. |
+| 10 | `tracing.py` `PII_KEYS` | Confirm which Case fields are PII (contact name, phone, email, location, VIN?) so traces and prompts redact them. |
+| 11 | `llm.py` `TICKET_RE` | Real HubSpot ticket id format (fixtures use a synthetic `hs-NNNNN`). Update the regex and the `GetCaseRequest` validation. |
+| 12 | `schemas/tools.py` `SyncStatusValue` | Map logical sync states to the real picklist values on Case. |

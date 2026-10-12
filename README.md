@@ -37,25 +37,52 @@ start
       |- no case reference    -> respond (ask for one)
       '- case reference       v
   -> get_case           tool (scoped to PARTNER_CODE)
-  -> find_transaction   tool: search Mule logs by correlation id / case id
-  -> diagnose           LLM + search_runbook tool; loops within step cap
-  -> respond            LLM: diagnosis, evidence, suggested fix, confidence
+  -> find_transaction   tool: search Mule logs by every known id
+      '- no case AND no logs -> respond ("found nothing", no guessing)
+  -> diagnose           LLM + search_runbook tool; loops within the step cap,
+                        finishes by calling the Diagnosis tool
+  -> respond            template: diagnosis, evidence, fix, confidence, INCOMPLETE banner
 end
 ```
+
+Every tool call goes through one choke point that enforces the step cap, the run
+deadline, and the per-tool timeout, writes a redacted trace line, and turns tool
+errors into evidence. Two deterministic guards check the LLM: extracted ids must
+appear in the user's text, and cited runbook ids must have been retrieved this run.
 
 | Tool | Live source | Read-only? |
 |---|---|---|
 | `check_mule_app_status` | Anypoint Runtime Manager / CloudHub 2.0 API | yes |
 | `get_sf_case` | Salesforce REST (read-only integration user) | yes |
 | `search_mule_logs` | Anypoint Runtime Manager logs API | yes |
-| `search_runbook` | local vector index over `docs/runbook/*.md` | yes |
+| `search_runbook` | local Chroma index over `docs/runbook/*.md` | yes |
 
 ## Running the demo (Git Bash, from repo root)
 ```bash
 uv sync
 cp .env.example .env            # defaults are mock mode; no keys needed
-uv run python -m triage index   # build runbook index (fake embeddings in mock mode)
-uv run python -m triage chat
+uv run python -m triage index   # build runbook index (free local embeddings)
+uv run python -m triage chat    # or: uv run python -m triage ask "Case 00412345 ..."
+```
+
+Mock fixtures you can ask about:
+
+| Ask about | Scenario |
+|---|---|
+| case 00412345 | duplicate case without the redispatch flag (cnet-001) |
+| case 00412400 | sent, but not in the priority queue (cnet-002) |
+| ticket hs-55777 | payload does not match the API contract (cnet-003) |
+| ticket hs-55810 | DataWeave transform failure (cnet-004) |
+| ticket hs-55900 | expired Salesforce session (cnet-005) |
+| case 00412500 | HubSpot rate limit on status updates (cnet-006) |
+| `:app down` then any case | Mule app down: health-check short-circuit (cnet-007) |
+| case 00412600 | healthy case; its log carries a prompt-injection string |
+| case 00499999 | another partner's case: scoped out, "found nothing" |
+| case 00477777 | slow lookup (set `TOOL_TIMEOUT_SECONDS=0.3` to see the timeout) |
+
+```bash
+MOCK_APP_STATE=down uv run python -m triage ask "Case 00412345 didn't sync"
+uv run python -m triage health
 ```
 
 ## What mock mode proves, and what it doesn't
