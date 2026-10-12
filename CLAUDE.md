@@ -55,6 +55,9 @@ src/triage/
   runbook/             indexer + retriever interface (Chroma now, pgvector later)
   llm.py               get_chat_model(): fake model in mock, init_chat_model in live
   tracing.py           JSONL tracer with redaction
+  tools/scoping.py     fail-closed partner scoping helpers (shared by mock and live)
+  tools/lc.py          @tool adapters for bind_tools (graph executes calls itself)
+  graph/prompts.py     prompt builders; untrusted data wrapped in tags
 docs/decisions/        ADRs (0001-0005)
 docs/runbook/          Known failure modes, one .md each. SOURCE OF TRUTH for RAG.
 docs/roadmap.md        Phases + status + every TODO(dustin)
@@ -83,4 +86,8 @@ Part A (architecture) on Fable 5.1 -> Part B (build) and Part C (handoff) on Opu
 The session must stop and ask Dustin to switch models; it cannot switch itself.
 
 ## Next session starts here
-(Filled in at the end of Session 1 Part C. See HANDOFF.md.)
+1. Session 1 (home PC, 2026-10-11) is done: mock-mode agent works end to end; 138 tests pass. Full context in `HANDOFF.md`.
+2. Setup: `uv sync`, `cp .env.example .env`, `uv run pytest -q`, then `uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"`.
+3. Before any live work: read the Coach Net API contract + XMLs in the work repo and replace the placeholder Case field names (HANDOFF section 4, items 1, 2, 11, 12).
+4. Next build step is Phase 2: live `get_sf_case` against a sandbox with a read-only integration user (HANDOFF section 7, with its security checks).
+5. Every unresolved `TODO(dustin)` is listed in `docs/roadmap.md`; confirm GitHub location and AI-tool policy with the team lead before pushing to TrxNow GitHub.

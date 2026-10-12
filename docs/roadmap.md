@@ -4,10 +4,10 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 
 ## Phase 1 - Scaffold and mock-mode agent (Session 1, home PC)
 - [x] Part A: kickoff, open questions, critical review, knowledge base, ADRs, schemas, graph layout, seed runbook (Fable 5.1)
-- [ ] Part B: mock tools + fixtures, graph wired with limits and tracing, fake LLM/embeddings, indexer, CLI chat, tests, demo transcript (Opus 5.5)
-- [ ] Part C: HANDOFF.md, roadmap/CLAUDE.md updates, bridge-repo push commands (Opus 5.5)
+- [x] Part B: mock tools + fixtures, graph wired with limits and tracing, scripted LLM + hashing embeddings, indexer, CLI, 138 tests, demo transcript (Opus 5.5, with Sonnet/Haiku subagents)
+- [x] Part C: HANDOFF.md, roadmap/CLAUDE.md updates, bridge-repo push commands (Opus 5.5)
 
-## Phase 2 - Live `get_sf_case` against a sandbox (work laptop)
+## Phase 2 - Live `get_sf_case` against a sandbox (work laptop)  <- NEXT
 - [ ] Read the API contract and XMLs in the work repo; replace placeholder field names
 - [ ] Read-only integration user + permission set (Case read, specific fields only)
 - [ ] Connected app with least-privilege scopes (prefer JWT bearer flow)
