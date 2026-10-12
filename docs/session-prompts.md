@@ -37,13 +37,10 @@ PC conversation. Model: **Opus 5.5**.
 Before pasting, in **Git Bash**:
 
 ```bash
-mkdir -p /c/Projects && cd /c/Projects
-git clone https://github.com/dustin-swayze/coachnet-triage-agent.git
-cd coachnet-triage-agent
-git checkout main
+mkdir -p /c/Users/Dustin/Documents/GitHub && cd /c/Users/Dustin/Documents/GitHub && git clone https://github.com/dustin-swayze/coachnet-triage-agent.git && cd coachnet-triage-agent && git checkout main
 ```
 
-Then open `C:\Projects\coachnet-triage-agent` in the Claude Desktop app (Code tab) and paste:
+Then open `C:\Users\Dustin\Documents\GitHub\coachnet-triage-agent` in the Claude Desktop app (Code tab) and paste:
 
 ```text
 This is the Partner Sync Triage Agent: a read-only AI agent that diagnoses why a Coach Net case did not sync between HubSpot and TrxNow's Salesforce through our MuleSoft app on CloudHub 2.0. It was built in mock mode on my home PC; this laptop is where it goes live. You have not seen any of that work, so get up to date from the repo before doing anything.

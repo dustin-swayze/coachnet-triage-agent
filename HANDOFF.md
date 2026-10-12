@@ -167,9 +167,9 @@ Search them with `grep -rn "TODO(dustin)" src docs .env.example`.
 
 Every step: **Shell: Git Bash** unless marked PowerShell. Directory stated per step.
 
-1. **Clone** (Git Bash, any parent folder, e.g. `/c/Projects`):
+1. **Clone** (Git Bash, into `C:\Users\Dustin\Documents\GitHub`):
    ```bash
-   mkdir -p /c/Projects && cd /c/Projects
+   mkdir -p /c/Users/Dustin/Documents/GitHub && cd /c/Users/Dustin/Documents/GitHub
    git clone https://github.com/Dustin-Swayze/coachnet-triage-agent.git
    cd coachnet-triage-agent
    git checkout main   # all Session 1 work, including the Slack bot; branch from here
@@ -184,7 +184,7 @@ Every step: **Shell: Git Bash** unless marked PowerShell. Directory stated per s
      then run it as `python -m uv ...`.
    Close and reopen Git Bash so `uv` is on PATH. Confirm the install method is allowed
    on a managed laptop.
-3. **Install dependencies** (Git Bash, `/c/Projects/coachnet-triage-agent`):
+3. **Install dependencies** (Git Bash, `/c/Users/Dustin/Documents/GitHub/coachnet-triage-agent`):
    ```bash
    uv sync
    ```
