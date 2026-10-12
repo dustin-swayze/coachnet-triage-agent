@@ -5,13 +5,13 @@ Commands:
   ask      one question, non-interactive (demos, scripting, evals)
   index    rebuild the runbook vector index from docs/runbook/*.md
   health   one-shot Mule app health check (same tool and predicate as the agent)
+  slack    run the Slack bot (Socket Mode) and the health-alert poller
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
 
 from triage.config import Settings, get_settings
 
@@ -23,16 +23,15 @@ Commands: :app <healthy|down|deploying|restart_loop|status_error> (mock only), :
 
 
 def _ensure_index(settings: Settings) -> None:
-    """In mock mode, build the runbook index on first use (free, ~1s). In live mode the
-    index is an explicit step so embedding costs are never a surprise."""
-    if Path(settings.index_dir).is_dir():
-        return
-    if not settings.is_mock:
-        sys.exit("Runbook index not found. Run: uv run python -m triage index")
-    from triage.runbook.indexer import build_index  # noqa: PLC0415
+    from triage.runbook.indexer import ensure_index  # noqa: PLC0415
 
-    n = build_index(settings)
-    print(f"(runbook index not found; built it from {n} entries with free local embeddings)\n")
+    try:
+        built = ensure_index(settings)
+    except RuntimeError as exc:
+        sys.exit(str(exc))
+    if built is not None:
+        print(f"(runbook index not found; built {built} entries with free local embeddings)")
+        print()
 
 
 def _run(question: str, settings: Settings) -> int:
@@ -108,6 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("chat", help="interactive triage chat")
     sub.add_parser("index", help="rebuild the runbook vector index")
     sub.add_parser("health", help="one-shot Mule app health check")
+    sub.add_parser("slack", help="run the Slack bot (Socket Mode); see docs/slack-setup.md")
     ask = sub.add_parser("ask", help="ask one question and exit")
     ask.add_argument("question")
     return parser
@@ -127,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_index(settings)
     if args.command == "health":
         return cmd_health(settings)
+    if args.command == "slack":
+        from triage.slack.bot import run_bot  # noqa: PLC0415
+
+        return run_bot(settings)
     return 2
 
 

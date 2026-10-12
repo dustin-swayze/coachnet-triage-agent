@@ -126,6 +126,7 @@ h2, h3 { scroll-margin-top: 1rem; }
         <li><a href="#langchain">Use of LangChain and LangGraph</a></li>
         <li><a href="#modules">Module catalogue</a></li>
         <li><a href="#cli">Command-line interface</a></li>
+        <li><a href="#slack">Slack bot</a></li>
         <li><a href="#config">Configuration</a></li>
         <li><a href="#adrs">Decision records</a></li>
         <li><a href="#testing">Testing</a></li>
@@ -147,7 +148,7 @@ h2, h3 { scroll-margin-top: 1rem; }
 
   <article>
     <h1>Partner Sync Triage Agent</h1>
-    <p class="subtitle">From the TrxNow integrations project wiki. Last updated 11 October 2026, end of Session 1.</p>
+    <p class="subtitle">From the TrxNow integrations project wiki. Last updated 11 October 2026, end of Session 1, with the Slack bot.</p>
 
     <div class="infobox" role="complementary">
       <table>
@@ -165,8 +166,9 @@ h2, h3 { scroll-margin-top: 1rem; }
           <tr><th>Integrations</th><td>Salesforce, MuleSoft Anypoint (CloudHub 2.0), HubSpot via Mule</td></tr>
           <tr><th>Tools</th><td>4, all read-only</td></tr>
           <tr><th>Runbook entries</th><td>7</td></tr>
-          <tr><th>Tests</th><td>145 passing, about 4 s</td></tr>
-          <tr><th>Decision records</th><td>6</td></tr>
+          <tr><th>Tests</th><td>221 passing, about 5 s</td></tr>
+          <tr><th>Decision records</th><td>7</td></tr>
+          <tr><th>Interfaces</th><td>CLI; Slack bot (mock demo)</td></tr>
           <tr><th>Repository</th><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent">dustin-swayze/coachnet-triage-agent</a> (private bridge; moving to TrxNow GitHub)</td></tr>
           <tr><th>Started</th><td>11 October 2026</td></tr>
         </tbody>
@@ -379,7 +381,26 @@ flowchart TD
 <pre><code>uv run python -m triage chat     # interactive; :app &lt;state&gt; switches mock app health, :quit exits
 uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"
 uv run python -m triage index    # rebuild the runbook index from docs/runbook
-uv run python -m triage health   # one-shot app health check; exit code 0 healthy, 1 unhealthy, 3 unknown</code></pre>
+uv run python -m triage health   # one-shot app health check; exit code 0 healthy, 1 unhealthy, 3 unknown
+uv run python -m triage slack    # Slack bot and health-alert poller (Socket Mode); setup in docs/slack-setup.md</code></pre>
+
+    <h2 id="slack">Slack bot</h2>
+    <p>The Slack bot brings the agent to a phone. It is a thin layer over the same run function as the CLI, so it uses the same graph, tools, limits, guards and traces. It connects out to Slack over Socket Mode, so it needs no public web address. It currently runs in mock mode in a personal demo workspace (ADR 0007).</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Feature</th><th>Behaviour</th></tr></thead>
+      <tbody>
+        <tr><td>Ways to ask</td><td><code>/triage case 00412345 ...</code>, an @mention in an approved channel, or a direct message</td></tr>
+        <tr><td>Reply flow</td><td>Acknowledges within Slack's 3 seconds, posts "Looking into it", replaces it with the answer, and puts the evidence in the thread</td></tr>
+        <tr><td>Access</td><td>Fail-closed, by where the answer lands: only allowlisted channels, or DMs with allowlisted users. Empty allowlists refuse everyone. Refusals are private and never run the agent.</td></tr>
+        <tr><td>Abuse limits</td><td>One run in flight per user, 20 per user per hour, at most 4 at once</td></tr>
+        <tr><td>Escaping</td><td>All user, case, log and model text is escaped, so it cannot ping <code>@channel</code> or create links</td></tr>
+        <tr><td>Health alerts</td><td>A poller posts once when the app goes unhealthy, once on recovery with the outage length, and once if the status check fails three times in a row</td></tr>
+        <tr><td>Demo switch</td><td><code>/triage :app down</code> and <code>:app healthy</code> change the simulated app health, in mock mode only</td></tr>
+        <tr><td>Scopes</td><td><code>app_mentions:read</code>, <code>chat:write</code>, <code>commands</code>, <code>im:history</code>. It cannot read channel history.</td></tr>
+        <tr><td>Audit</td><td>Each run's local trace records that it came from Slack and the requester's Slack user id</td></tr>
+      </tbody>
+    </table></div>
+    <p>Moving it to TrxNow's Slack needs workspace-admin approval for a separate app, approval for case details in Slack, and an always-on host on Azure.</p>
 
     <h2 id="config">Configuration</h2>
     <p>All settings come from environment variables or a gitignored <code>.env</code>, validated at startup. <code>.env.example</code> documents every variable. Secrets are stored as secret values that never render in logs.</p>
@@ -394,6 +415,7 @@ uv run python -m triage health   # one-shot app health check; exit code 0 health
         <tr><td>Salesforce</td><td>Instance URL, connected-app credentials, API version, six Case field names</td><td>Field names are placeholders</td></tr>
         <tr><td>Anypoint</td><td>Connected-app credentials, org, environment, Private Space, app name</td><td>App name is a placeholder</td></tr>
         <tr><td>LangSmith</td><td><code>LANGSMITH_ENABLED</code>, <code>LANGSMITH_API_KEY</code>, <code>LANGSMITH_PROJECT</code>, <code>LANGSMITH_ENDPOINT</code></td><td>false; key required when true</td></tr>
+        <tr><td>Slack</td><td><code>SLACK_BOT_TOKEN</code>, <code>SLACK_APP_TOKEN</code>, <code>SLACK_ALLOWED_CHANNEL_IDS</code>, <code>SLACK_ALLOWED_USER_IDS</code>, <code>SLACK_ALERT_CHANNEL_ID</code>, <code>HEALTH_POLL_SECONDS</code>, <code>SLACK_MAX_RUNS_PER_USER_PER_HOUR</code></td><td>Empty allowlists refuse everyone; 300 s; 20 per hour</td></tr>
         <tr><td>Mock only</td><td><code>MOCK_APP_STATE</code></td><td>healthy</td></tr>
       </tbody>
     </table></div>
@@ -409,6 +431,7 @@ uv run python -m triage health   # one-shot app health check; exit code 0 health
         <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0004-markdown-runbook-source-of-truth.md">0004</a></td><td>Markdown runbook is the source of truth; the index is derived</td><td>Humans review markdown in pull requests; indexes can be rebuilt</td></tr>
         <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0005-partner-scoping-fail-closed.md">0005</a></td><td>Partner-generic, fail-closed scoping</td><td>An unscoped read of production CRM data is a leak even when read-only</td></tr>
         <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md">0006</a></td><td>JSONL traces are the record; LangSmith optional, off by default</td><td>The audit trail must not depend on a third-party service</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0007-slack-interface-socket-mode.md">0007</a></td><td>Slack interface over Socket Mode, fail-closed access, edge-triggered alerts</td><td>Phone access through a thin layer over the same tested agent</td></tr>
       </tbody>
     </table></div>
 
@@ -425,7 +448,10 @@ uv run python -m triage health   # one-shot app health check; exit code 0 health
         <tr><td><code>test_scenarios.py</code></td><td class="num">19</td><td>Each seed scenario reaches the right runbook entry; injection framing is present</td></tr>
         <tr><td><code>test_runbook.py</code></td><td class="num">28</td><td>Loader validation, deterministic embeddings, each entry retrieves itself</td></tr>
         <tr><td><code>test_langsmith.py</code></td><td class="num">7</td><td>LangSmith off by default and off wins; on means one nested trace per run; uploads redacted</td></tr>
-        <tr><th>Total</th><td class="num"><b>145</b></td><td>About 4 seconds</td></tr>
+        <tr><td><code>test_slack_bot.py</code></td><td class="num">33</td><td>Fail-closed allowlists, rate limits, the reply flow, crash handling, the demo switch, health alerts, Slack routing</td></tr>
+        <tr><td><code>test_slack_blocks.py</code></td><td class="num">39</td><td>Every answer kind renders; injected Slack syntax is escaped; Slack size limits hold</td></tr>
+        <tr><td><code>test_cli.py</code></td><td class="num">4</td><td>Every CLI command runs and exits with the right code</td></tr>
+        <tr><th>Total</th><td class="num"><b>221</b></td><td>About 5 seconds</td></tr>
       </tbody>
     </table></div>
 
@@ -435,7 +461,7 @@ uv run python -m triage health   # one-shot app health check; exit code 0 health
       <li><b>Part A, architecture.</b> Open questions answered, the brief reviewed critically, the knowledge base, five decision records, all schemas and the graph layout as stubs, and seven seed runbook entries.</li>
       <li><b>Part B, build.</b> Mock tools and fixtures, runbook retrieval, the wired graph with limits and tracing, the scripted model, the CLI, the test suite and a demo transcript.</li>
       <li><b>Part C, handoff.</b> A standalone kickoff document for the work-laptop session, roadmap and memory updates, and a push to a private bridge repository on GitHub.</li>
-      <li><b>Afterwards.</b> Optional LangSmith tracing behind a flag, decision record 0006, and this overview.</li>
+      <li><b>Afterwards.</b> Optional LangSmith tracing behind a flag (decision record 0006), this overview, and a mock-mode Slack bot with health alerts (decision record 0007).</li>
     </ul>
 
     <h3 id="models">Models and agents used</h3>
@@ -450,6 +476,8 @@ uv run python -m triage health   # one-shot app health check; exit code 0 health
         <tr><td>Claude Sonnet 5.5</td><td>Subagent</td><td>The pytest suite; it surfaced a real redaction defect</td></tr>
         <tr><td>Claude Haiku 5.5</td><td>Subagent, read-only</td><td>Audit of fixtures and docs for real data or secrets: none found</td></tr>
         <tr><td>Claude Haiku 5.5</td><td>Subagent, read-only</td><td>Factual inventory of the repository for this page</td></tr>
+        <tr><td>Claude Sonnet 5.5</td><td>Subagent</td><td>Slack message formatting, the Slack app manifest and the setup guide, with 39 tests</td></tr>
+        <tr><td>Claude Haiku 5.5</td><td>Subagent, read-only</td><td>Sweep of the Slack work for leaked tokens, doc gaps and unescaped output</td></tr>
       </tbody>
     </table></div>
 
@@ -462,6 +490,11 @@ uv run python -m triage health   # one-shot app health check; exit code 0 health
         <tr><td>Test suite</td><td>The identifier guard dropped an invented case number but also lost the real one</td><td>Recover identifiers from the user's text</td></tr>
         <tr><td>Probe before coding</td><td>A stray <code>LANGSMITH_TRACING=true</code> started uploads even with tracing disabled in code</td><td>Force the library switches off in-process when the flag is off</td></tr>
         <tr><td>Demo run</td><td>The key log line showed a 429 warning instead of the final error</td><td>Prefer error lines over warnings</td></tr>
+        <tr><td>Slack wiring test</td><td>Bolt checked authorization against slack.com on every request, so tests made network calls</td><td>Offline authorization in tests</td></tr>
+        <tr><td>Formatting agent</td><td>The test environment scrubber missed Slack variables, so a developer's shell could change test results</td><td>Scrub <code>SLACK_</code> and <code>HEALTH_</code> variables</td></tr>
+        <tr><td>Lint</td><td>A refactor broke a string in the CLI, and no test imported the CLI</td><td>Fixed, plus CLI smoke tests</td></tr>
+        <tr><td>Review sweep</td><td>An allowlisted user could summon answers with case details into any channel the bot was in</td><td>Answers post only in allowlisted channels or DMs</td></tr>
+        <tr><td>Review sweep</td><td>A Slack API error could leave "Looking into it" in place</td><td>Caught and reported to the user privately</td></tr>
       </tbody>
     </table></div>
 
@@ -491,14 +524,14 @@ f2ff771  11 Oct 22:32  Session 1 Part A: architecture scaffold</code></pre>
         <tr><td>3</td><td>Live <code>check_mule_app_status</code> with a view-only Anypoint app</td><td><span class="pill na">Planned</span></td></tr>
         <tr><td>4</td><td>Live <code>search_mule_logs</code> from Runtime Manager</td><td><span class="pill na">Planned</span></td></tr>
         <tr><td>5</td><td>Evals: 10 to 20 scripted scenarios against the real model, tracked pass rate, Sonnet versus Haiku</td><td><span class="pill na">Planned</span></td></tr>
-        <tr><td>6</td><td>Slack bot and a scheduled health poller, likely on TrxNow Azure</td><td><span class="pill na">Planned</span></td></tr>
+        <tr><td>6</td><td>Slack bot and a scheduled health poller; TrxNow Slack and Azure hosting still to do</td><td><span class="pill ok">Mock demo built</span></td></tr>
         <tr><td>7</td><td>Email intake to Asana tickets with diagnosis, with reader and actor privileges split</td><td><span class="pill na">Planned</span></td></tr>
       </tbody>
     </table></div>
     <p>Before each live phase: the credential is dedicated and proven read-only with a refused test write in the sandbox; secrets appear nowhere in traces; scoping is in the query and rechecked; HTTP timeouts are set; response bodies are truncated and redacted. Before any of it: confirm the GitHub location, AI-tool policy, the Anthropic API and LangSmith data sharing with the team lead.</p>
 
     <h2 id="open">Open items</h2>
-    <p>Thirteen items are marked <code>TODO(dustin)</code> in code and listed in the roadmap. The most important come first.</p>
+    <p>Fourteen items are marked <code>TODO(dustin)</code> in code and listed in the roadmap. The most important come first.</p>
     <ol>
       <li>Real Case field names for partner code, HubSpot id, sync status, last sync, correlation id and redispatch flag, from the API contract.</li>
       <li>Where the correlation id lives: a Case field, a log key, a header, or several.</li>
@@ -513,6 +546,7 @@ f2ff771  11 Oct 22:32  Session 1 Part A: architecture scaffold</code></pre>
       <li>The real HubSpot ticket id format.</li>
       <li>Real sync-status picklist values.</li>
       <li>Approval for LangSmith to receive redacted case data.</li>
+      <li>TrxNow Slack: admin approval for a separate app, approval for case data in Slack, and hosting.</li>
     </ol>
 
     <h2 id="limitations">Limitations</h2>

@@ -10,7 +10,7 @@ a MuleSoft app on CloudHub 2.0.
 > confidence score. Every tool call is traced to a JSONL file you can audit.
 
 ## Status
-Session 1 complete: working agent in mock mode, 145 passing tests. Mock mode only. No real credentials, data, or log formats are in
+Session 1 complete: working agent and Slack bot in mock mode, 221 passing tests. Mock mode only. No real credentials, data, or log formats are in
 this repo. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Why it's built this way (short version)
@@ -25,6 +25,8 @@ this repo. See [docs/roadmap.md](docs/roadmap.md).
   API key. ([ADR 0003](docs/decisions/0003-mock-live-tools-and-fake-llm.md))
 - **Markdown runbook is the source of truth.** The vector index is derived and
   rebuildable. ([ADR 0004](docs/decisions/0004-markdown-runbook-source-of-truth.md))
+- **Slack is a thin interface.** The bot runs the same agent as the CLI, over Socket
+  Mode, with fail-closed access and escaped output. ([ADR 0007](docs/decisions/0007-slack-interface-socket-mode.md))
 - **Local audit trail, optional hosted tracing.** JSONL traces are always written;
   LangSmith is behind a flag, off by default. ([ADR 0006](docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md))
 - **Partner-generic, fail-closed scoping.** Tools filter on a configured partner code
@@ -86,6 +88,22 @@ Mock fixtures you can ask about:
 MOCK_APP_STATE=down uv run python -m triage ask "Case 00412345 didn't sync"
 uv run python -m triage health
 ```
+
+## Slack bot (mock mode demo)
+Ask from your phone: `/triage case 00412345 looks like a duplicate`, an @mention in an
+approved channel, or a DM. The bot replies "Looking into it", then replaces that with
+the diagnosis and puts the evidence in the thread. A built-in poller posts one alert
+when the Mule app goes down and one when it recovers.
+
+```bash
+# Git Bash, repo root. One-time setup in a free personal Slack workspace: docs/slack-setup.md
+uv run python -m triage slack
+```
+
+In mock mode, `/triage :app down` and `/triage :app healthy` switch the simulated app
+health, so you can demo the outage alert. Access is fail-closed (allowlisted channels
+or users only), output is escaped so it cannot ping @channel, and the bot is
+read-only like the agent. ([ADR 0007](docs/decisions/0007-slack-interface-socket-mode.md))
 
 ## Observability
 - **JSONL traces (always on).** `traces/<run_id>.jsonl`: every node, tool call, and
@@ -246,14 +264,15 @@ here; they are in the file). Inputs are redacted before they are written.
 
 ## Tests
 ```bash
-uv run pytest -q        # 145 tests, ~4s, mock mode, no network
+uv run pytest -q        # 221 tests, ~5s, mock mode, no network
 ```
 Covers: health-check short-circuit, step cap and time budget, fail-closed scoping, tool
 error handling, trace redaction, the LLM guards, runbook loading and retrieval, and one
-scenario per seed runbook entry, plus the LangSmith flag (off wins, one trace per run,
-redaction on upload).
+scenario per seed runbook entry, plus the LangSmith flag, the Slack bot (access, limits, escaping, Bolt wiring),
+health alerts, and the CLI.
 
 ## Docs
+- [docs/slack-setup.md](docs/slack-setup.md) - Slack bot setup for the mock demo
 - [docs/overview.html](docs/overview.html) - wiki-style architecture overview and catalogue of everything built
 - [docs/decisions/](docs/decisions/) - ADRs
 - [docs/runbook/](docs/runbook/) - known failure modes (RAG source)

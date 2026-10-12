@@ -36,8 +36,10 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 - [ ] Use results to pick Sonnet 5.5 vs Haiku 5.5 at runtime
 
 ## Phase 6 - Interfaces
-- [ ] Slack bot (phone access)
-- [ ] Scheduled poller reusing `check_mule_app_status` to alert before anyone files a bug
+- [x] Slack bot, mock mode, personal demo workspace (Socket Mode; ADR 0007; docs/slack-setup.md)
+- [x] Edge-triggered health poller posting to a Slack alert channel (runs inside the bot process)
+- [ ] TrxNow Slack: admin approval, approval for case data in Slack, separate app and tokens
+- [ ] Always-on hosting for the bot (TrxNow Azure)
 - [ ] Likely host: TrxNow Azure
 
 ## Phase 7 - Email intake
@@ -72,3 +74,4 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 | 11 | `llm.py` `TICKET_RE` | Real HubSpot ticket id format (fixtures use a synthetic `hs-NNNNN`). Update the regex and the `GetCaseRequest` validation. |
 | 12 | `schemas/tools.py` `SyncStatusValue` | Map logical sync states to the real picklist values on Case. |
 | 13 | `.env` `LANGSMITH_ENABLED` | Approval to send redacted prompts/outputs to LangSmith (LangChain cloud, US or EU) with real case data. If not approved, keep it off or evaluate self-hosted Langfuse. |
+| 14 | `.env` `SLACK_*` | TrxNow Slack: workspace-admin approval for a separate app; approval for case details in Slack and its retention; where the bot is hosted. |

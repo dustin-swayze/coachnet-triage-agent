@@ -40,6 +40,8 @@ _LEAKY_PREFIXES = (
     "MULE_APP_NAME",
     "LANGSMITH_",
     "LANGCHAIN_",
+    "SLACK_",
+    "HEALTH_",
 )
 
 

@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langsmith import traceable
@@ -537,6 +537,27 @@ class Nodes:
 # ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
+ResponseKind = Literal["alert", "health", "ask_for_case", "nothing_found", "diagnosis", "none"]
+
+
+def response_kind(state: TriageState, *, incomplete: bool) -> ResponseKind:
+    """Which answer shape a finished run produced. Shared by every interface (CLI,
+    Slack) so they can never disagree about what kind of answer this is."""
+    app, parsed, diag = state.get("app_status"), state.get("parsed"), state.get("diagnosis")
+    if app is not None and not app.is_healthy:
+        return "alert"
+    if parsed is not None and parsed.intent is RequestIntent.HEALTH_ONLY:
+        return "health"
+    if parsed is not None and not parsed.has_case_reference:
+        return "ask_for_case"
+    no_evidence = state.get("case") is None and state.get("logs") is None
+    if parsed is not None and diag is None and no_evidence and not incomplete:
+        return "nothing_found"
+    if diag is not None:
+        return "diagnosis"
+    return "none"
+
+
 def render_response(
     state: TriageState, settings: Settings, *, incomplete: bool, reason: str | None
 ) -> str:
@@ -546,7 +567,9 @@ def render_response(
     if incomplete:
         lines.append(f"INCOMPLETE: {reason}. Showing what was found so far.\n")
 
-    if app is not None and not app.is_healthy:
+    kind = response_kind(state, incomplete=incomplete)
+    if kind == "alert":
+        assert app is not None
         lines += [
             f"ALERT: the {settings.partner_name} Mule app is not healthy.",
             f"  {app.summary}",
@@ -565,19 +588,18 @@ def render_response(
             "skipped. Next step (human, in Runtime Manager): check deployment logs, then",
             "redeploy or restart. See runbook cnet-007.",
         ]
-    elif parsed is not None and parsed.intent is RequestIntent.HEALTH_ONLY:
+    elif kind == "health":
         lines.append(f"The {settings.partner_name} Mule app looks healthy: {app_line}.")
         if app and app.status is AppStatusValue.UNKNOWN:
             lines.append("Note: the status check itself failed, so this is not confirmed.")
-    elif parsed is not None and not parsed.has_case_reference:
+    elif kind == "ask_for_case":
         lines += [
             "I need a case to look at. Give me a Salesforce case number (8 digits) or a",
             "HubSpot ticket id, and optionally when it happened.",
             f"(App health right now: {app.summary if app else 'unknown'}.)",
         ]
-    elif (
-        diag is None and state.get("case") is None and state.get("logs") is None and not incomplete
-    ):
+    elif kind == "nothing_found":
+        assert parsed is not None
         ref = parsed.case_number or parsed.external_id or parsed.correlation_id
         lines += [
             f"I found nothing for {ref} in {settings.partner_name} ({settings.partner_code}) data:",
@@ -587,7 +609,8 @@ def render_response(
             f"it is a {settings.partner_name} case, and the time window. If a lookup timed out or",
             "failed upstream, try again shortly.",
         ]
-    elif diag is not None:
+    elif kind == "diagnosis":
+        assert diag is not None
         lines += [
             f"Diagnosis: {diag.summary}",
             "",

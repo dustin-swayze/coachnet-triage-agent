@@ -101,6 +101,27 @@ class Settings(BaseSettings):
             raise ValueError("must not be blank (fail-closed scoping, ADR 0005)")
         return v.strip()
 
+    # ---- Slack bot (Phase 6; mock-mode demo runs in a personal workspace) ------
+    # Socket Mode: the bot connects out to Slack, so no public URL is needed.
+    slack_bot_token: SecretStr | None = None  # xoxb-...  (OAuth & Permissions)
+    slack_app_token: SecretStr | None = None  # xapp-...  (app-level token, connections:write)
+    # Fail-closed access, based on where the answer will be seen: an allowlisted channel,
+    # or a DM with an allowlisted user. Allowlisted users cannot summon answers into other
+    # channels. Both empty => the bot refuses everyone. Comma-separated Slack ids.
+    slack_allowed_channel_ids: str = ""
+    slack_allowed_user_ids: str = ""
+    slack_alert_channel_id: str | None = None  # where health alerts go; unset = no poller
+    health_poll_seconds: int = Field(default=300, ge=10)
+    slack_max_runs_per_user_per_hour: int = Field(default=20, ge=1)
+
+    @property
+    def slack_allowed_channels(self) -> frozenset[str]:
+        return frozenset(x.strip() for x in self.slack_allowed_channel_ids.split(",") if x.strip())
+
+    @property
+    def slack_allowed_users(self) -> frozenset[str]:
+        return frozenset(x.strip() for x in self.slack_allowed_user_ids.split(",") if x.strip())
+
     @model_validator(mode="after")
     def _langsmith_needs_key(self) -> Settings:
         if self.langsmith_enabled and not self.langsmith_api_key:

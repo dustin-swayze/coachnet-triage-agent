@@ -124,6 +124,8 @@ def run_triage(
     tools: ToolSet,
     llm: Any,
     trace_dir: str | None = None,
+    requester: str | None = None,
+    interface: str = "cli",
 ) -> RunResult:
     """One end-to-end run: fresh state, run-scoped tracer, compiled graph, invoke."""
     state = initial_state(
@@ -137,6 +139,8 @@ def run_triage(
         partner=settings.partner_code,
         step_cap=settings.step_cap,
         run_budget_seconds=settings.run_budget_seconds,
+        interface=interface,
+        requester=requester,  # e.g. a Slack user id: who asked, for the audit trail
         # Recorded so the audit trail says whether data also went to LangSmith (ADR 0006).
         langsmith_project=settings.langsmith_project if settings.langsmith_enabled else None,
     )

@@ -85,6 +85,7 @@ Key files: `src/triage/graph/nodes.py` (all node logic, limits, guards),
 - [ADR 0004](docs/decisions/0004-markdown-runbook-source-of-truth.md): markdown runbook is the source of truth, vector index is derived
 - [ADR 0005](docs/decisions/0005-partner-scoping-fail-closed.md): partner-generic, fail-closed scoping
 - [ADR 0006](docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md): JSONL traces are the record; LangSmith optional, off by default
+- [ADR 0007](docs/decisions/0007-slack-interface-socket-mode.md): Slack interface over Socket Mode, fail-closed access, edge-triggered alerts
 - [docs/overview.html](docs/overview.html): wiki-style architecture overview and catalogue (published as a private artifact)
 
 ---
@@ -99,11 +100,15 @@ Key files: `src/triage/graph/nodes.py` (all node logic, limits, guards),
 - Mock tools with synthetic fixtures for all seven seed runbook scenarios, plus
   scoping, timeout, upstream-error, healthy, and prompt-injection fixtures.
 - Runbook RAG: loader, hashing embedder, Chroma index, partner-filtered search.
-- CLI: `chat`, `ask`, `index`, `health`.
+- CLI: `chat`, `ask`, `index`, `health`, `slack`.
+- Slack bot (mock mode, personal demo workspace): slash command, @mentions, DMs, threaded
+  evidence, fail-closed allowlists, rate limits, escaped output, and an edge-triggered
+  health-alert poller. Setup: `docs/slack-setup.md`. Moving it to TrxNow's Slack needs
+  admin approval and a separate app (open item 14).
 - Seven seed runbook entries in `docs/runbook/` (synthetic log shapes; see open items).
 
 ### Tested
-`uv run pytest -q`: **145 passed in ~4s** (Windows 11, Python 3.12.1, mock mode, no
+`uv run pytest -q`: **221 passed in ~5s** (Windows 11, Python 3.12.1, mock mode, no
 network). `uv run ruff check src tests`: clean.
 
 | Module | Tests | Protects |
@@ -116,6 +121,9 @@ network). `uv run ruff check src tests`: clean.
 | `test_scenarios.py` | 19 | each seed scenario reaches the right runbook entry; prompt-injection framing present |
 | `test_runbook.py` | 28 | loader validation, deterministic embeddings, each entry retrieves itself |
 | `test_langsmith.py` | 7 | LangSmith off by default and off wins over stray env; on = one nested trace per run; redaction on upload |
+| `test_slack_bot.py` | 33 | fail-closed allowlists, rate limits, ack-then-update flow, crash handling, `:app` demo switch, edge-triggered health alerts, Bolt routing (offline) |
+| `test_slack_blocks.py` | 39 | every answer kind renders; escaping blocks `<!channel>` and links; Slack size limits; LangSmith suffix |
+| `test_cli.py` | 4 | every CLI subcommand runs and exits with the right code |
 
 Two real bugs were found by the tests and fixed in Session 1: token-usage counts were
 being redacted, and the parse guard lost a real case number when the model invented
@@ -149,6 +157,7 @@ Search them with `grep -rn "TODO(dustin)" src docs .env.example`.
 | 11 | `llm.py` `TICKET_RE`, `schemas/tools.py` | Real HubSpot ticket id format (fixtures use synthetic `hs-NNNNN`). |
 | 12 | `schemas/tools.py` `SyncStatusValue` | Map logical sync states to the real picklist values. |
 | 13 | `.env` `LANGSMITH_ENABLED` | Optional LangSmith tracing is built and off by default (ADR 0006). Get approval before enabling it with real case data; otherwise keep it off or evaluate self-hosted Langfuse. |
+| 14 | `.env` `SLACK_*` | TrxNow Slack: workspace-admin approval for a separate app (never reuse the demo tokens), approval for case details in Slack and its retention, and an always-on host (Azure). |
 
 ---
 
@@ -161,7 +170,7 @@ Every step: **Shell: Git Bash** unless marked PowerShell. Directory stated per s
    mkdir -p /c/Projects && cd /c/Projects
    git clone https://github.com/Dustin-Swayze/coachnet-triage-agent.git
    cd coachnet-triage-agent
-   git checkout feature/scaffold   # main holds the same commits; work continues on feature branches
+   git checkout main   # all Session 1 work, including the Slack bot; branch from here
    ```
 2. **Install `uv` if missing.** Check first (Git Bash, any directory): `uv --version`.
    If it is missing, either:

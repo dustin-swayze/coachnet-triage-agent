@@ -42,6 +42,7 @@ uv run pytest                         # run tests
 uv run python -m triage chat          # CLI chat (mock mode by default)
 uv run python -m triage index         # rebuild runbook vector index from docs/runbook
 uv run python -m triage health        # one-shot app health check
+uv run python -m triage slack         # Slack bot + health poller (Socket Mode; docs/slack-setup.md)
 uv run ruff check . && uv run ruff format .
 ```
 
@@ -56,10 +57,11 @@ src/triage/
   llm.py               get_chat_model(): fake model in mock, init_chat_model in live
   tracing.py           JSONL tracer with redaction (system of record)
   observability.py     optional LangSmith, off by default; off is forced (ADR 0006)
+  slack/               Slack bot (bot.py), Block Kit rendering (blocks.py), health alerts (ADR 0007)
   tools/scoping.py     fail-closed partner scoping helpers (shared by mock and live)
   tools/lc.py          @tool adapters for bind_tools (graph executes calls itself)
   graph/prompts.py     prompt builders; untrusted data wrapped in tags
-docs/decisions/        ADRs (0001-0006)
+docs/decisions/        ADRs (0001-0007)
 docs/runbook/          Known failure modes, one .md each. SOURCE OF TRUTH for RAG.
 docs/roadmap.md        Phases + status + every TODO(dustin)
 docs/glossary.md       Terms as used in this project
@@ -87,7 +89,7 @@ Part A (architecture) on Fable 5.1 -> Part B (build) and Part C (handoff) on Opu
 The session must stop and ask Dustin to switch models; it cannot switch itself.
 
 ## Next session starts here
-1. Session 1 (home PC, 2026-10-11) is done: mock-mode agent works end to end; 145 tests pass. Full context in `HANDOFF.md`.
+1. Session 1 (home PC, 2026-10-11) is done: mock-mode agent works end to end; 221 tests pass. Full context in `HANDOFF.md`.
 2. Setup: `uv sync`, `cp .env.example .env`, `uv run pytest -q`, then `uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"`.
 3. Before any live work: read the Coach Net API contract + XMLs in the work repo and replace the placeholder Case field names (HANDOFF section 4, items 1, 2, 11, 12).
 4. Next build step is Phase 2: live `get_sf_case` against a sandbox with a read-only integration user (HANDOFF section 7, with its security checks).

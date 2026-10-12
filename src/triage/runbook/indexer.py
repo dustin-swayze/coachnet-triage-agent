@@ -72,3 +72,16 @@ def build_index(
             ids=[e.id for e in entries],
         )
     return len(entries)
+
+
+def ensure_index(settings: Settings) -> int | None:
+    """Make sure an index exists before serving questions.
+
+    Mock mode builds it on first use (free, about a second). Live mode refuses, so
+    embedding costs are never a surprise. Returns the entry count if it built one.
+    """
+    if Path(settings.index_dir).is_dir():
+        return None
+    if not settings.is_mock:
+        raise RuntimeError("Runbook index not found. Run: uv run python -m triage index")
+    return build_index(settings)
