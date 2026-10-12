@@ -85,6 +85,7 @@ Key files: `src/triage/graph/nodes.py` (all node logic, limits, guards),
 - [ADR 0004](docs/decisions/0004-markdown-runbook-source-of-truth.md): markdown runbook is the source of truth, vector index is derived
 - [ADR 0005](docs/decisions/0005-partner-scoping-fail-closed.md): partner-generic, fail-closed scoping
 - [ADR 0006](docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md): JSONL traces are the record; LangSmith optional, off by default
+- [docs/overview.html](docs/overview.html): wiki-style architecture overview and catalogue (published as a private artifact)
 
 ---
 

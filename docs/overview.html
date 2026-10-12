@@ -1,0 +1,544 @@
+<title>Partner Sync Triage Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: encyclopedia article. Sticky contents rail on the left (wide screens),
+   one reading column, infobox floated right; tables scroll inside their own box. */
+:root {
+  --bg: #ffffff;
+  --fg: #202122;
+  --muted: #54595d;
+  --link: #3366cc;
+  --rule: #a2a9b1;
+  --panel: #f8f9fa;
+  --panel-head: #eaecf0;
+  --code-bg: #f6f6f4;
+  --ok: #14866d;
+  --warn: #a66200;
+  --serif: "Source Serif 4", "Linux Libertine", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101418; --fg: #eaecf0; --muted: #a2a9b1; --link: #88a3e8; --rule: #54595d;
+    --panel: #181c21; --panel-head: #23282e; --code-bg: #1d2127; --ok: #3cc29b; --warn: #e3a345;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101418; --fg: #eaecf0; --muted: #a2a9b1; --link: #88a3e8; --rule: #54595d;
+  --panel: #181c21; --panel-head: #23282e; --code-bg: #1d2127; --ok: #3cc29b; --warn: #e3a345;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+code, kbd { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 2px; }
+pre { font-family: var(--mono); font-size: 0.82rem; background: var(--code-bg); border: 1px solid var(--rule); padding: 0.8rem 1rem; overflow-x: auto; line-height: 1.45; }
+pre code { background: none; padding: 0; }
+
+.page { max-width: 1240px; margin: 0 auto; padding-block: 1.25rem 4rem; padding-inline: 16px; display: grid; grid-template-columns: 1fr; gap: 2rem; }
+@media (min-width: 1000px) { .page { grid-template-columns: 220px minmax(0, 1fr); padding-inline: 24px; } }
+
+.masthead { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1.5rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.4rem; font-size: 0.82rem; color: var(--muted); }
+.masthead strong { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; color: var(--fg); letter-spacing: 0.01em; }
+
+nav.toc { font-size: 0.86rem; align-self: start; }
+@media (min-width: 1000px) { nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 1rem); max-height: calc(100vh - 2rem); overflow-y: auto; } }
+nav.toc details { border: 1px solid var(--rule); background: var(--panel); padding: 0.5rem 0.8rem; }
+nav.toc summary { cursor: pointer; font-weight: 600; }
+nav.toc ol { margin: 0.4rem 0 0; padding-left: 1.4rem; display: grid; gap: 0.15rem; }
+nav.toc ol ol { margin-top: 0.15rem; padding-left: 1.1rem; }
+nav.toc li::marker { color: var(--muted); }
+
+article { min-width: 0; max-width: 960px; }
+h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.8rem, 4vw, 2.3rem); line-height: 1.2; margin: 0 0 0.2rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.25rem; text-wrap: balance; }
+.subtitle { color: var(--muted); font-size: 0.86rem; margin: 0 0 1.2rem; }
+h2 { font-family: var(--serif); font-weight: 400; font-size: 1.6rem; line-height: 1.3; margin: 2.2rem 0 0.6rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.15rem; text-wrap: balance; clear: both; }
+h3 { font-size: 1.05rem; font-weight: 700; margin: 1.5rem 0 0.4rem; text-wrap: balance; }
+p, ul, ol { max-width: 72ch; }
+p { margin: 0.5rem 0 0.8rem; }
+ul, ol { padding-left: 1.4rem; margin: 0.4rem 0 0.9rem; }
+li { margin: 0.2rem 0; }
+.hatnote { font-style: italic; color: var(--muted); padding-left: 1.6rem; margin: 0.2rem 0 0.8rem; font-size: 0.92rem; }
+
+.infobox { float: none; width: 100%; margin: 0 0 1.2rem; border: 1px solid var(--rule); background: var(--panel); font-size: 0.84rem; line-height: 1.45; }
+@media (min-width: 720px) { .infobox { float: right; width: 300px; margin: 0.3rem 0 1rem 1.4rem; } }
+.infobox caption { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; padding: 0.4rem; caption-side: top; text-align: center; }
+.infobox table { width: 100%; border-collapse: collapse; }
+.infobox th, .infobox td { padding: 0.25rem 0.5rem; vertical-align: top; text-align: left; }
+.infobox th { width: 38%; font-weight: 600; }
+.infobox .band { background: var(--panel-head); text-align: center; font-weight: 600; }
+.infobox .diagram { padding: 0.6rem; text-align: center; }
+
+.tbl { overflow-x: auto; margin: 0.6rem 0 1.2rem; }
+table.wiki { border-collapse: collapse; font-size: 0.86rem; background: var(--panel); min-width: 100%; }
+table.wiki caption { text-align: left; font-weight: 600; padding: 0.2rem 0 0.4rem; }
+table.wiki th, table.wiki td { border: 1px solid var(--rule); padding: 0.35rem 0.55rem; vertical-align: top; text-align: left; }
+table.wiki th { background: var(--panel-head); font-weight: 600; }
+table.wiki td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.03em; padding: 0 0.45em; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--ok); }
+.pill.todo { color: var(--warn); }
+.pill.na { color: var(--muted); }
+
+.mermaid-wrap { overflow-x: auto; border: 1px solid var(--rule); background: var(--panel); padding: 0.8rem; margin: 0.6rem 0 0.4rem; }
+.figcap { font-size: 0.84rem; color: var(--muted); margin: 0 0 1.2rem; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 2rem; }
+.cols > * { min-width: 0; }
+.refs { font-size: 0.86rem; }
+.refs li { margin: 0.15rem 0; }
+footer { margin-top: 3rem; border-top: 1px solid var(--rule); padding-top: 0.6rem; font-size: 0.8rem; color: var(--muted); max-width: 72ch; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+h2, h3 { scroll-margin-top: 1rem; }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <strong>Project Wiki</strong>
+    <span>TrxNow integrations · internal · synthetic data only</span>
+  </header>
+
+  <nav class="toc" aria-label="Contents">
+    <details open>
+      <summary>Contents</summary>
+      <ol>
+        <li><a href="#background">Background</a></li>
+        <li><a href="#principles">Design principles</a></li>
+        <li><a href="#architecture">Architecture</a>
+          <ol>
+            <li><a href="#graph">Control flow</a></li>
+            <li><a href="#state">State</a></li>
+            <li><a href="#limits">Limits and failure handling</a></li>
+            <li><a href="#guards">Safety mechanisms</a></li>
+            <li><a href="#observability">Observability</a></li>
+          </ol>
+        </li>
+        <li><a href="#tools">Tool catalogue</a></li>
+        <li><a href="#nodes">Node catalogue</a></li>
+        <li><a href="#runbook">Runbook catalogue</a></li>
+        <li><a href="#mock">Mock mode and fixtures</a></li>
+        <li><a href="#langchain">Use of LangChain and LangGraph</a></li>
+        <li><a href="#modules">Module catalogue</a></li>
+        <li><a href="#cli">Command-line interface</a></li>
+        <li><a href="#config">Configuration</a></li>
+        <li><a href="#adrs">Decision records</a></li>
+        <li><a href="#testing">Testing</a></li>
+        <li><a href="#history">Development history</a>
+          <ol>
+            <li><a href="#models">Models and agents used</a></li>
+            <li><a href="#bugs">Defects found and fixed</a></li>
+            <li><a href="#commits">Commit log</a></li>
+          </ol>
+        </li>
+        <li><a href="#skills">Claude Code skills and memory</a></li>
+        <li><a href="#roadmap">Roadmap and go-live</a></li>
+        <li><a href="#open">Open items</a></li>
+        <li><a href="#limitations">Limitations</a></li>
+        <li><a href="#refs">See also</a></li>
+      </ol>
+    </details>
+  </nav>
+
+  <article>
+    <h1>Partner Sync Triage Agent</h1>
+    <p class="subtitle">From the TrxNow integrations project wiki. Last updated 11 October 2026, end of Session 1.</p>
+
+    <div class="infobox" role="complementary">
+      <table>
+        <caption>Partner Sync Triage Agent</caption>
+        <tbody>
+          <tr><td colspan="2" class="band">Read-only AI triage agent</td></tr>
+          <tr><th>Purpose</th><td>Explain why a partner case did not sync between HubSpot and Salesforce</td></tr>
+          <tr><th>First partner</th><td>Coach Net (partner code <code>CNET</code>)</td></tr>
+          <tr><th>Developer</th><td>Dustin Swayze, TrxNow</td></tr>
+          <tr><th>Status</th><td><span class="pill ok">Mock mode working</span> <span class="pill todo">Live not started</span></td></tr>
+          <tr><th>Language</th><td>Python 3.12</td></tr>
+          <tr><th>Orchestration</th><td>LangGraph 1.2 <code>StateGraph</code></td></tr>
+          <tr><th>Building blocks</th><td>LangChain 1.4, Pydantic 2.14, Chroma 1.5</td></tr>
+          <tr><th>Runtime model</th><td><code>claude-sonnet-5-5</code> (configurable)</td></tr>
+          <tr><th>Integrations</th><td>Salesforce, MuleSoft Anypoint (CloudHub 2.0), HubSpot via Mule</td></tr>
+          <tr><th>Tools</th><td>4, all read-only</td></tr>
+          <tr><th>Runbook entries</th><td>7</td></tr>
+          <tr><th>Tests</th><td>145 passing, about 4 s</td></tr>
+          <tr><th>Decision records</th><td>6</td></tr>
+          <tr><th>Repository</th><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent">dustin-swayze/coachnet-triage-agent</a> (private bridge; moving to TrxNow GitHub)</td></tr>
+          <tr><th>Started</th><td>11 October 2026</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The <b>Partner Sync Triage Agent</b> is a read-only AI agent that answers the question "why didn't this case sync?" for TrxNow's partner integrations. A partner's HubSpot instance syncs with TrxNow's Salesforce org through a MuleSoft application running on Anypoint CloudHub 2.0. When someone reports a problem with a case, the agent checks the Mule application's health, reads the case from Salesforce, finds the matching transaction in the Mule logs, matches the evidence against a runbook of known failure modes, and replies with a diagnosis, the evidence it used, a suggested fix, and a confidence score.</p>
+    <p>The first partner is Coach Net. The code is partner-generic: partner identity comes from configuration, so a second partner is a second configuration file rather than a fork. The project is also a learning exercise in agent design (agent loops, tool design, retrieval-augmented generation, evaluation) and a pitch to TrxNow's integration leadership, so its code and documentation are written to demonstration quality.</p>
+    <p>As of the end of Session 1 the agent runs end to end in <b>mock mode</b>, against synthetic data and a scripted stand-in for the language model, at zero cost and with no API key. Live integrations are planned for the work laptop in Phases 2 to 4.</p>
+
+    <h2 id="background">Background</h2>
+    <p>Before this project, verifying a report such as "Case 00412345 didn't sync" meant moving between Anypoint Runtime Manager, the Mule logs, and Salesforce. That was slow at a desk and close to impossible from a phone, and there was no quick way to learn that the Mule application itself was down. The agent compresses that investigation into one plain-English question with an auditable answer in about 30 seconds.</p>
+    <p>Five failure modes account for most real sync problems, as described by the integration owner. Each became a runbook entry and a mock scenario:</p>
+    <ul>
+      <li>A case is duplicated without the redispatch flag.</li>
+      <li>A case appears sent but never reaches TrxNow's Priority Queue.</li>
+      <li>A send fails because the inbound HubSpot payload does not match the API contract.</li>
+      <li>A case fails in the DataWeave transform.</li>
+      <li>Everything else: expired credentials, HubSpot rate limits, and the Mule application being down or restarting.</li>
+    </ul>
+
+    <h2 id="principles">Design principles</h2>
+    <p>Nine constraints were fixed before any code was written. They are copied into every handoff document.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>#</th><th>Constraint</th><th>How it is enforced</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><b>Read-only</b></td><td>No tool interface can express a write. Fixes that need writes are suggestions for a human.</td></tr>
+        <tr><td class="num">2</td><td><b>Fail-closed scoping</b></td><td>The partner filter is built into every query and rechecked on the result. A tool that cannot prove scope raises an error.</td></tr>
+        <tr><td class="num">3</td><td><b>No real TrxNow data in the repo</b></td><td>Synthetic fixtures only, audited by a separate agent. Secrets live only in a gitignored <code>.env</code>.</td></tr>
+        <tr><td class="num">4</td><td><b>Least-privilege credentials</b></td><td>One read-only credential per integration, proven read-only in the sandbox before each phase goes live.</td></tr>
+        <tr><td class="num">5</td><td><b>Bounded agent</b></td><td>Step cap, per-tool timeout and total time budget, all held in graph state. Hitting one returns partial results marked incomplete.</td></tr>
+        <tr><td class="num">6</td><td><b>Every tool call traced</b></td><td>One redacted JSONL line per tool call, node and model call, in one file per run.</td></tr>
+        <tr><td class="num">7</td><td><b>Swappable LLM provider</b></td><td><code>init_chat_model</code> reads provider and model from configuration.</td></tr>
+        <tr><td class="num">8</td><td><b>Portable to Agentforce</b></td><td>Tools are plain typed functions with Pydantic schemas, separate from the LangGraph orchestration.</td></tr>
+        <tr><td class="num">9</td><td><b>Zero cost in mock mode</b></td><td>A scripted chat model and local embeddings run the whole graph with no key.</td></tr>
+      </tbody>
+    </table></div>
+    <p>One further principle runs through the design: <b>deterministic where possible, LLM only where judgment is needed</b>. The health check, routing, limits, scoping, guards and final rendering are plain code. The model extracts the request and interprets the evidence.</p>
+
+    <h2 id="architecture">Architecture</h2>
+    <h3 id="graph">Control flow</h3>
+    <p>The agent is an explicit LangGraph <code>StateGraph</code>. LangChain's prebuilt agent was rejected because it lets the model decide whether to check health at all. In the graph, the health check is structurally first.</p>
+    <div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+  S([Start]) --> H[health_check<br/>code, no LLM]
+  H -- app unhealthy --> R[respond<br/>template]
+  H -- healthy or unknown --> P[parse_request<br/>LLM + id guard]
+  P -- health question or no case id --> R
+  P -- case or ticket id --> C[get_case<br/>scoped Salesforce read]
+  C --> F[find_transaction<br/>Mule log search]
+  F -- no case and no logs --> R
+  F --> D[diagnose<br/>LLM with tools]
+  D -- search_runbook call --> T[diagnose_tools<br/>runs searches under the cap]
+  T -- under cap --> D
+  T -- limit hit --> R
+  D -- Diagnosis tool call --> R
+  R --> E([End])
+</pre>
+    </div>
+    <p class="figcap">Figure 1. The triage graph. Every edge leaving a node is either fixed or chosen by a small routing function in code.</p>
+
+    <h3 id="state">State</h3>
+    <p>Graph state is a typed dictionary whose values are Pydantic models, so every piece of evidence is validated and serializable. Lists of evidence, errors, runbook hits and messages use append reducers so nodes add to them without overwriting. Limits live in state too: <code>steps_used</code>, <code>step_cap</code>, <code>deadline</code>, <code>incomplete</code> and <code>incomplete_reason</code>. That lets the final node report "incomplete" with everything found so far instead of the run raising an exception.</p>
+
+    <h3 id="limits">Limits and failure handling</h3>
+    <p>Every tool call passes through one function that checks the step cap and the run deadline, runs the tool in a worker thread with a timeout, writes a trace line, and turns any tool error into a recorded error plus a line of evidence. A failed lookup is evidence, such as "no CNET case found for 00499999", rather than a crash. Model calls go through a matching function under the same deadline.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Error</th><th>Meaning</th><th>Effect on the run</th></tr></thead>
+      <tbody>
+        <tr><td><code>ScopeError</code></td><td>Scoping to the configured partner could not be proven</td><td>Recorded; no data returned</td></tr>
+        <tr><td><code>NotFoundError</code></td><td>No record or no log lines matched</td><td>Recorded as evidence; run continues</td></tr>
+        <tr><td><code>UpstreamError</code></td><td>The remote API failed (status, short redacted body, retryable flag)</td><td>Recorded; run continues</td></tr>
+        <tr><td><code>ToolTimeoutError</code></td><td>The per-tool timeout or remaining run budget was exceeded</td><td>Recorded; run continues or ends incomplete</td></tr>
+      </tbody>
+    </table></div>
+    <p>Defaults: 8 tool calls per run, 15 seconds per tool, 60 seconds per run. LangGraph's own recursion limit is set well above the step cap as a backstop that should never fire.</p>
+
+    <h3 id="guards">Safety mechanisms</h3>
+    <ul>
+      <li><b>Identifier guard.</b> A case number, ticket id or correlation id the model extracts must appear verbatim in the user's text. Invented ids are dropped and logged, and real ids the model missed are recovered by regular expression.</li>
+      <li><b>Runbook-citation guard.</b> The diagnosis may cite only runbook entries retrieved in the same run. Unknown ids are dropped and confidence is capped at 50%.</li>
+      <li><b>Evidence-based confidence cap.</b> With no case and no log transaction, confidence is capped at 40%.</li>
+      <li><b>No-evidence route.</b> When neither the case nor any logs are found, the graph skips diagnosis and reports what it looked up and what failed.</li>
+      <li><b>Untrusted-data framing.</b> The user's text, case fields, log lines and tool results reach the model inside tagged data blocks, with an instruction to treat them as data. A closing tag smuggled into the data is neutralized. A deliberate prompt-injection string sits in the fixtures to keep this honest.</li>
+      <li><b>Redaction everywhere data leaves code.</b> Keys and values that look like secrets, tokens, JWTs or personal data are masked before they are written to a trace, placed in a prompt, or uploaded to LangSmith.</li>
+    </ul>
+
+    <h3 id="observability">Observability</h3>
+    <p>Two layers, by design (ADR 0006):</p>
+    <ul>
+      <li><b>JSONL traces</b> are always on and are the system of record. Each run writes <code>traces/&lt;run_id&gt;.jsonl</code> with events for run start and end, node entry and exit, tool calls, model calls with token usage, limit hits and guard actions. They never leave the machine.</li>
+      <li><b>LangSmith</b> is optional and off by default behind <code>LANGSMITH_ENABLED</code>. When on, a run appears as one nested trace with every tool and model call, tagged with the same run id as its JSONL file. Uploads pass through the same redaction. When off, tracing is forced off even if a stray <code>LANGSMITH_TRACING</code> variable is set.</li>
+    </ul>
+<pre><code>{"event": "tool_call", "tool": "get_sf_case", "inputs": {"case_number": "00412345", "external_id": null},
+ "output_summary": "Case 00412345 [CNET] status=New sync=SYNCED external_id=hs-55501 ... DUPLICATE_OF=00412301",
+ "latency_ms": 0, "error": null}</code></pre>
+    <p class="figcap">Figure 2. One trace line from the duplicate-case demo run.</p>
+
+    <h2 id="tools">Tool catalogue</h2>
+    <p>The agent has four tools. Each takes exactly one Pydantic request model and returns one result model, and none can write. Mock and live implementations share one interface and are chosen by <code>TRIAGE_MODE</code>.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Tool</th><th>Question it answers</th><th>Input</th><th>Output</th><th>Can raise</th><th>Mock</th><th>Live</th></tr></thead>
+      <tbody>
+        <tr><td><code>check_mule_app_status</code></td><td>Is the Mule app up?</td><td>Restart window in minutes</td><td>Status, replicas running and desired, last deploy, recent restarts, and a single <code>is_healthy</code> definition</td><td>Upstream, Timeout</td><td><span class="pill ok">Built</span> 5 states</td><td><span class="pill todo">Phase 3</span></td></tr>
+        <tr><td><code>get_sf_case</code></td><td>What does Salesforce say about this case?</td><td>Case number or HubSpot ticket id, exactly one</td><td>Case fields plus sync status, last sync, external id, correlation id, redispatch flag, duplicate-of</td><td>Scope, NotFound, Upstream, Timeout</td><td><span class="pill ok">Built</span> simulated SOQL</td><td><span class="pill todo">Phase 2</span></td></tr>
+        <tr><td><code>search_mule_logs</code></td><td>What did Mule do with it?</td><td>Correlation id, case number or ticket id (at least one), time window, max entries</td><td>Log entries expanded to whole transactions, correlation ids, truncation flag</td><td>Scope, NotFound, Upstream, Timeout</td><td><span class="pill ok">Built</span> fixture logs</td><td><span class="pill todo">Phase 4</span></td></tr>
+        <tr><td><code>search_runbook</code></td><td>Which known issue fits?</td><td>Query text, top-k</td><td>Matching runbook entries with symptoms, cause, how to confirm, fix and a similarity score</td><td>Upstream (index missing)</td><td colspan="2"><span class="pill ok">Built</span> local Chroma index in both modes</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="nodes">Node catalogue</h2>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Node</th><th>Kind</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>health_check</code></td><td>Code</td><td>Calls the status tool. An unhealthy app ends the run with an alert. A failed status check marks the app unknown and triage continues.</td></tr>
+        <tr><td><code>parse_request</code></td><td>LLM, structured output</td><td>Extracts intent, identifiers, time window and symptom, then applies the identifier guard. Falls back to regex if the model fails.</td></tr>
+        <tr><td><code>get_case</code></td><td>Tool</td><td>Scoped Salesforce lookup by case number or ticket id.</td></tr>
+        <tr><td><code>find_transaction</code></td><td>Tool</td><td>Searches logs by every known identifier at once, so retries and duplicates of one ticket appear together.</td></tr>
+        <tr><td><code>diagnose</code></td><td>LLM with tools</td><td>Given the evidence, searches the runbook and finishes by calling the <code>Diagnosis</code> tool. A plain-text reply gets one structured conversion.</td></tr>
+        <tr><td><code>diagnose_tools</code></td><td>Tool executor</td><td>Runs the requested runbook searches under the step cap and returns a tool message for every call.</td></tr>
+        <tr><td><code>respond</code></td><td>Template</td><td>Renders one of five answer shapes: alert, health status, ask for a case, nothing found, or diagnosis. Adds the evidence list and an incomplete banner when needed.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="runbook">Runbook catalogue</h2>
+    <p>The runbook is the agent's diagnostic knowledge: one markdown file per known failure mode in <code>docs/runbook/</code>. The markdown is the source of truth. The vector index is derived and is rebuilt with <code>uv run python -m triage index</code>. Log wording in every entry is synthetic until real log shapes are available.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Id</th><th>Failure mode</th><th>Scope</th><th>Direction</th><th>Telltale evidence</th></tr></thead>
+      <tbody>
+        <tr><td><code>cnet-001</code></td><td>Duplicate case created without the redispatch flag</td><td>CNET</td><td>Inbound</td><td>Two creates for one ticket, no redispatch flag</td></tr>
+        <tr><td><code>cnet-002</code></td><td>Case shows as sent but never appears in the Priority Queue</td><td>CNET</td><td>Inbound</td><td>Clean transaction, 200 to HubSpot, case marked sent</td></tr>
+        <tr><td><code>cnet-003</code></td><td>Send failed: payload does not match the API contract</td><td>CNET</td><td>Inbound</td><td><code>APIKIT:BAD_REQUEST</code>, 400</td></tr>
+        <tr><td><code>cnet-004</code></td><td>Transform (DataWeave) failure</td><td>CNET</td><td>Inbound</td><td><code>MULE:EXPRESSION</code> in a <code>.dwl</code> file, 500</td></tr>
+        <tr><td><code>cnet-005</code></td><td>Expired or invalid credentials</td><td>All partners</td><td>Either</td><td><code>INVALID_SESSION_ID</code> or 401 across many cases</td></tr>
+        <tr><td><code>cnet-006</code></td><td>HubSpot rate limit on outbound status updates</td><td>All partners</td><td>Outbound</td><td><code>HTTP:TOO_MANY_REQUESTS</code> 429, retries exhausted</td></tr>
+        <tr><td><code>cnet-007</code></td><td>Mule app down, mid-deploy or restart-looping</td><td>All partners</td><td>Both</td><td>Status not running, zero replicas, or restart storm</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="mock">Mock mode and fixtures</h2>
+    <p>Mock mode runs the full graph against fixture-backed tools and a scripted chat model. The scripted model reads the same prompt a real model receives and answers by graph node, so skipped branches never desynchronize it. Embeddings come from a local hashing embedder that keeps error codes such as <code>429</code> and <code>MULE:EXPRESSION</code> as tokens, which makes mock retrieval lexically meaningful rather than random.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Ask about</th><th>Scenario</th><th>Expected answer</th></tr></thead>
+      <tbody>
+        <tr><td>case 00412345</td><td>Duplicate of 00412301, same ticket hs-55501</td><td>cnet-001</td></tr>
+        <tr><td>case 00412400</td><td>Sent, clean logs, not in the queue</td><td>cnet-002</td></tr>
+        <tr><td>ticket hs-55777</td><td>Null required property, 400</td><td>cnet-003</td></tr>
+        <tr><td>ticket hs-55810</td><td>Empty string coerced to a date in the mapping</td><td>cnet-004</td></tr>
+        <tr><td>ticket hs-55900</td><td>Salesforce session expired; two more tickets affected</td><td>cnet-005</td></tr>
+        <tr><td>case 00412500</td><td>Status update hit 429 three times</td><td>cnet-006</td></tr>
+        <tr><td><code>:app down</code>, then any case</td><td>App stopped</td><td>Alert, cnet-007</td></tr>
+        <tr><td>case 00412600</td><td>Healthy case; its log carries a prompt-injection string</td><td>No sync failure found</td></tr>
+        <tr><td>case 00499999</td><td>Another partner's case</td><td>Nothing found, without revealing the other partner</td></tr>
+        <tr><td>case 00466666</td><td>Salesforce returns 503</td><td>Upstream error recorded</td></tr>
+        <tr><td>case 00477777</td><td>Lookup slower than the timeout</td><td>Timeout recorded</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="langchain">Use of LangChain and LangGraph</h2>
+    <p>LangGraph owns the control flow. LangChain is a thin adapter layer around the model and the vector store. Tools are executed by the graph itself, never by LangChain, so every call is counted, timed out and traced.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Component</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td><code>StateGraph</code> (LangGraph)</td><td>Nodes, fixed and conditional edges, typed state with reducers</td></tr>
+        <tr><td><code>init_chat_model</code></td><td>Provider and model swap from configuration in live mode</td></tr>
+        <tr><td><code>BaseChatModel</code></td><td>The scripted mock model implements the real chat-model interface</td></tr>
+        <tr><td><code>with_structured_output</code></td><td>Request parsing into a validated Pydantic object</td></tr>
+        <tr><td><code>bind_tools</code> and <code>tool_calls</code></td><td>Offering <code>search_runbook</code> and <code>Diagnosis</code> to the model, provider-neutral</td></tr>
+        <tr><td><code>@tool</code></td><td>Declaring the runbook search's name and schema to the model</td></tr>
+        <tr><td>Message types</td><td>System, human, AI and tool messages in the diagnose loop</td></tr>
+        <tr><td><code>Embeddings</code> interface</td><td>Plugging the local hashing embedder into the vector store</td></tr>
+        <tr><td><code>langchain_chroma.Chroma</code></td><td>The runbook index with partner filtering</td></tr>
+        <tr><td>LangSmith <code>traceable</code>, <code>tracing_context</code></td><td>Optional hosted tracing, off by default</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="modules">Module catalogue</h2>
+    <div class="tbl"><table class="wiki" id="module-table">
+      <thead><tr><th>Module</th><th>Lines</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/__main__.py"><code>__main__.py</code></a></td><td class="num">134</td><td>CLI: chat, ask, index, health</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/config.py"><code>config.py</code></a></td><td class="num">134</td><td>Validated settings from .env; fail-closed partner and LangSmith checks</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/graph/build.py"><code>graph/build.py</code></a></td><td class="num">165</td><td>The whole control flow: nodes, edges, run entry point</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/graph/nodes.py"><code>graph/nodes.py</code></a></td><td class="num">662</td><td>Node logic, limits and timeouts, guards, response rendering, routing</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/graph/prompts.py"><code>graph/prompts.py</code></a></td><td class="num">151</td><td>Prompts with untrusted data framed in tags</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/llm.py"><code>llm.py</code></a></td><td class="num">297</td><td>Scripted mock model and live init_chat_model factory</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/observability.py"><code>observability.py</code></a></td><td class="num">96</td><td>Optional LangSmith, off by default</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tracing.py"><code>tracing.py</code></a></td><td class="num">146</td><td>JSONL tracer and redaction</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/schemas/tools.py"><code>schemas/tools.py</code></a></td><td class="num">260</td><td>Pydantic input and output models for the four tools</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/schemas/state.py"><code>schemas/state.py</code></a></td><td class="num">132</td><td>Graph state, parsed request, evidence, diagnosis</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/base.py"><code>tools/base.py</code></a></td><td class="num">142</td><td>Tool interfaces, error hierarchy, mock/live factory</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/scoping.py"><code>tools/scoping.py</code></a></td><td class="num">85</td><td>Partner filter builder and post-query scope check</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/lc.py"><code>tools/lc.py</code></a></td><td class="num">31</td><td>LangChain @tool adapter for the runbook search</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/mock/sf_case.py"><code>tools/mock/sf_case.py</code></a></td><td class="num">114</td><td>Mock Salesforce lookup imitating scoped SOQL</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/mock/logs.py"><code>tools/mock/logs.py</code></a></td><td class="num">68</td><td>Mock log search with whole-transaction expansion</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/mock/app_status.py"><code>tools/mock/app_status.py</code></a></td><td class="num">46</td><td>Mock app health, five states</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/mock/_fixtures.py"><code>tools/mock/_fixtures.py</code></a></td><td class="num">33</td><td>Fixture loader with relative timestamps</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/tools/live/__init__.py"><code>tools/live/__init__.py</code></a></td><td class="num">21</td><td>Live backends: stub until Phases 2 to 4</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/runbook/loader.py"><code>runbook/loader.py</code></a></td><td class="num">145</td><td>Markdown runbook parser and validation</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/runbook/embeddings.py"><code>runbook/embeddings.py</code></a></td><td class="num">95</td><td>Local hashing embedder that keeps error codes</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/runbook/indexer.py"><code>runbook/indexer.py</code></a></td><td class="num">74</td><td>Clean rebuild of the Chroma index</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/runbook/retriever.py"><code>runbook/retriever.py</code></a></td><td class="num">91</td><td>Partner-filtered Chroma retrieval</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/src/triage/runbook/tool.py"><code>runbook/tool.py</code></a></td><td class="num">31</td><td>search_runbook tool implementation</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="cli">Command-line interface</h2>
+    <p>All commands run from the repository root in Git Bash.</p>
+<pre><code>uv run python -m triage chat     # interactive; :app &lt;state&gt; switches mock app health, :quit exits
+uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"
+uv run python -m triage index    # rebuild the runbook index from docs/runbook
+uv run python -m triage health   # one-shot app health check; exit code 0 healthy, 1 unhealthy, 3 unknown</code></pre>
+
+    <h2 id="config">Configuration</h2>
+    <p>All settings come from environment variables or a gitignored <code>.env</code>, validated at startup. <code>.env.example</code> documents every variable. Secrets are stored as secret values that never render in logs.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Group</th><th>Variables</th><th>Defaults</th></tr></thead>
+      <tbody>
+        <tr><td>Mode and model</td><td><code>TRIAGE_MODE</code>, <code>LLM_PROVIDER</code>, <code>LLM_MODEL</code>, provider API keys</td><td>mock, anthropic, claude-sonnet-5-5</td></tr>
+        <tr><td>Partner scoping</td><td><code>PARTNER_CODE</code>, <code>PARTNER_NAME</code></td><td>CNET, Coach Net; blank refused</td></tr>
+        <tr><td>Limits</td><td><code>STEP_CAP</code>, <code>TOOL_TIMEOUT_SECONDS</code>, <code>RUN_BUDGET_SECONDS</code></td><td>8, 15, 60</td></tr>
+        <tr><td>Traces</td><td><code>TRACE_DIR</code></td><td>traces</td></tr>
+        <tr><td>Runbook</td><td><code>RUNBOOK_DIR</code>, <code>INDEX_DIR</code>, <code>EMBEDDINGS_PROVIDER</code></td><td>docs/runbook, data/index, hashing</td></tr>
+        <tr><td>Salesforce</td><td>Instance URL, connected-app credentials, API version, six Case field names</td><td>Field names are placeholders</td></tr>
+        <tr><td>Anypoint</td><td>Connected-app credentials, org, environment, Private Space, app name</td><td>App name is a placeholder</td></tr>
+        <tr><td>LangSmith</td><td><code>LANGSMITH_ENABLED</code>, <code>LANGSMITH_API_KEY</code>, <code>LANGSMITH_PROJECT</code>, <code>LANGSMITH_ENDPOINT</code></td><td>false; key required when true</td></tr>
+        <tr><td>Mock only</td><td><code>MOCK_APP_STATE</code></td><td>healthy</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="adrs">Decision records</h2>
+    <p>Each architectural decision has a short record in <code>docs/decisions/</code>, amended when the build changed it.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>ADR</th><th>Decision</th><th>Key reason</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0001-langgraph-stategraph-over-create-agent.md">0001</a></td><td>Explicit LangGraph <code>StateGraph</code> over <code>create_agent</code> or a raw loop. Amended: template response, no-evidence route, final answer as a tool, guards.</td><td>The health check must be first by structure, not by prompt</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0002-deterministic-health-check-first.md">0002</a></td><td>Deterministic health check runs first, in code</td><td>"Zero replicas" needs no judgment, and the alert poller reuses it</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0003-mock-live-tools-and-fake-llm.md">0003</a></td><td>Mock and live tools behind one interface; node-keyed scripted model; hashing embeddings</td><td>Free, hermetic tests and schema-first tool design</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0004-markdown-runbook-source-of-truth.md">0004</a></td><td>Markdown runbook is the source of truth; the index is derived</td><td>Humans review markdown in pull requests; indexes can be rebuilt</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0005-partner-scoping-fail-closed.md">0005</a></td><td>Partner-generic, fail-closed scoping</td><td>An unscoped read of production CRM data is a leak even when read-only</td></tr>
+        <tr><td><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md">0006</a></td><td>JSONL traces are the record; LangSmith optional, off by default</td><td>The audit trail must not depend on a third-party service</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="testing">Testing</h2>
+    <p>All tests run in mock mode with no network and no keys, ignore any developer <code>.env</code>, and build the runbook index once per session in a temporary directory.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Module</th><th>Tests</th><th>Invariant protected</th></tr></thead>
+      <tbody>
+        <tr><td><code>test_health_short_circuit.py</code></td><td class="num">10</td><td>An unhealthy app ends the run after one tool call with no model call; a failed status check does not block triage</td></tr>
+        <tr><td><code>test_step_cap.py</code></td><td class="num">5</td><td>Step cap and time budget end the run incomplete with partial evidence and never hang</td></tr>
+        <tr><td><code>test_scoping.py</code></td><td class="num">29</td><td>Another partner's case is not found and not revealed; a wrong field name is a scope error; no bare log dumps</td></tr>
+        <tr><td><code>test_tool_errors.py</code></td><td class="num">13</td><td>Upstream errors, timeouts, tool bugs, a missing index, model failure, and both guards</td></tr>
+        <tr><td><code>test_trace_redaction.py</code></td><td class="num">34</td><td>Secrets, tokens, JWTs and personal data are masked; trace structure; token usage survives</td></tr>
+        <tr><td><code>test_scenarios.py</code></td><td class="num">19</td><td>Each seed scenario reaches the right runbook entry; injection framing is present</td></tr>
+        <tr><td><code>test_runbook.py</code></td><td class="num">28</td><td>Loader validation, deterministic embeddings, each entry retrieves itself</td></tr>
+        <tr><td><code>test_langsmith.py</code></td><td class="num">7</td><td>LangSmith off by default and off wins; on means one nested trace per run; uploads redacted</td></tr>
+        <tr><th>Total</th><td class="num"><b>145</b></td><td>About 4 seconds</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="history">Development history</h2>
+    <p>Session 1 ran on the evening of 11 October 2026 on a home PC, in mock mode only. It followed a kickoff brief with three parts.</p>
+    <ul>
+      <li><b>Part A, architecture.</b> Open questions answered, the brief reviewed critically, the knowledge base, five decision records, all schemas and the graph layout as stubs, and seven seed runbook entries.</li>
+      <li><b>Part B, build.</b> Mock tools and fixtures, runbook retrieval, the wired graph with limits and tracing, the scripted model, the CLI, the test suite and a demo transcript.</li>
+      <li><b>Part C, handoff.</b> A standalone kickoff document for the work-laptop session, roadmap and memory updates, and a push to a private bridge repository on GitHub.</li>
+      <li><b>Afterwards.</b> Optional LangSmith tracing behind a flag, decision record 0006, and this overview.</li>
+    </ul>
+
+    <h3 id="models">Models and agents used</h3>
+    <p>Work was split by model to match each task: the strongest model for decisions that are expensive to change, smaller models for well-specified work. Subagents worked in separate file areas and never committed; the main session reviewed their work and made every commit.</p>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Model</th><th>Role</th><th>Work</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Fable 5.1</td><td>Main session, Part A</td><td>Critical review of the brief, decision records 0001 to 0005, schemas, graph layout, seed runbook</td></tr>
+        <tr><td>Claude Opus 5.5</td><td>Main session, Parts B and C</td><td>Graph nodes and wiring, limits and timeouts, tracing and redaction, scripted model, prompts, CLI, integration, fixes, LangSmith, handoff</td></tr>
+        <tr><td>Claude Sonnet 5.5</td><td>Subagent</td><td>Mock tools, synthetic fixtures and scoping helpers</td></tr>
+        <tr><td>Claude Sonnet 5.5</td><td>Subagent</td><td>Runbook loader, hashing embeddings, Chroma index and search tool, with a retrieval check</td></tr>
+        <tr><td>Claude Sonnet 5.5</td><td>Subagent</td><td>The pytest suite; it surfaced a real redaction defect</td></tr>
+        <tr><td>Claude Haiku 5.5</td><td>Subagent, read-only</td><td>Audit of fixtures and docs for real data or secrets: none found</td></tr>
+        <tr><td>Claude Haiku 5.5</td><td>Subagent, read-only</td><td>Factual inventory of the repository for this page</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 id="bugs">Defects found and fixed</h3>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Found by</th><th>Defect</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>Scenario run</td><td>With no case and no logs, the agent still forced a weak runbook match</td><td>New route that answers "nothing found" without diagnosing</td></tr>
+        <tr><td>Test suite</td><td>Redaction masked every key containing "token", hiding token-usage counts</td><td>Mask token-valued keys only</td></tr>
+        <tr><td>Test suite</td><td>The identifier guard dropped an invented case number but also lost the real one</td><td>Recover identifiers from the user's text</td></tr>
+        <tr><td>Probe before coding</td><td>A stray <code>LANGSMITH_TRACING=true</code> started uploads even with tracing disabled in code</td><td>Force the library switches off in-process when the flag is off</td></tr>
+        <tr><td>Demo run</td><td>The key log line showed a 429 warning instead of the final error</td><td>Prefer error lines over warnings</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 id="commits">Commit log</h3>
+<pre id="commit-log"><code>21f11f4  11 Oct 23:18  Optional LangSmith tracing behind LANGSMITH_ENABLED (off by default)
+3eff24f  11 Oct 23:08  HANDOFF: real bridge repo clone URL
+23f9ab9  11 Oct 22:57  Session 1 Part C: HANDOFF.md for the work-laptop session; CLAUDE.md and roadmap updated
+95c1393  11 Oct 22:57  README: demo transcript and trace excerpt from a mock-mode run
+bd10de6  11 Oct 22:56  Docs: ADR amendments from the build, README architecture and demo table, new TODOs
+7ede431  11 Oct 22:56  Test suite (138 tests) and two fixes it surfaced
+7278aa3  11 Oct 22:48  Wire the LangGraph triage agent: limits, tracing, scripted model, CLI
+96fdb97  11 Oct 22:48  Runbook RAG: markdown loader, hashing embeddings, Chroma index, search tool
+6ede295  11 Oct 22:48  Mock tool backends with synthetic fixtures and shared scoping helpers
+2027a0f  11 Oct 22:40  Toolchain: pin Python 3.12, uv lockfile, LF line endings, runbook/mock settings
+f2ff771  11 Oct 22:32  Session 1 Part A: architecture scaffold</code></pre>
+
+    <h2 id="skills">Claude Code skills and memory</h2>
+    <p>No Claude Code skills, plugins or custom slash commands were created in this project. The reusable assets are the four tools, their schemas, the runbook and the prompts, which are designed to move to another orchestrator such as Agentforce.</p>
+    <p>Project knowledge lives in the repository rather than in any chat session: <code>CLAUDE.md</code> for Claude Code, <code>HANDOFF.md</code> for the next session, plus the roadmap, glossary and decision records. Claude Code's own memory on the home PC holds three short notes: the developer's working preferences, the project's status, and the preference to match models to tasks.</p>
+
+    <h2 id="roadmap">Roadmap and go-live</h2>
+    <div class="tbl"><table class="wiki">
+      <thead><tr><th>Phase</th><th>Scope</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Scaffold and mock-mode agent</td><td><span class="pill ok">Done</span></td></tr>
+        <tr><td>2</td><td>Live <code>get_sf_case</code> against a sandbox with a read-only integration user</td><td><span class="pill todo">Next</span></td></tr>
+        <tr><td>3</td><td>Live <code>check_mule_app_status</code> with a view-only Anypoint app</td><td><span class="pill na">Planned</span></td></tr>
+        <tr><td>4</td><td>Live <code>search_mule_logs</code> from Runtime Manager</td><td><span class="pill na">Planned</span></td></tr>
+        <tr><td>5</td><td>Evals: 10 to 20 scripted scenarios against the real model, tracked pass rate, Sonnet versus Haiku</td><td><span class="pill na">Planned</span></td></tr>
+        <tr><td>6</td><td>Slack bot and a scheduled health poller, likely on TrxNow Azure</td><td><span class="pill na">Planned</span></td></tr>
+        <tr><td>7</td><td>Email intake to Asana tickets with diagnosis, with reader and actor privileges split</td><td><span class="pill na">Planned</span></td></tr>
+      </tbody>
+    </table></div>
+    <p>Before each live phase: the credential is dedicated and proven read-only with a refused test write in the sandbox; secrets appear nowhere in traces; scoping is in the query and rechecked; HTTP timeouts are set; response bodies are truncated and redacted. Before any of it: confirm the GitHub location, AI-tool policy, the Anthropic API and LangSmith data sharing with the team lead.</p>
+
+    <h2 id="open">Open items</h2>
+    <p>Thirteen items are marked <code>TODO(dustin)</code> in code and listed in the roadmap. The most important come first.</p>
+    <ol>
+      <li>Real Case field names for partner code, HubSpot id, sync status, last sync, correlation id and redispatch flag, from the API contract.</li>
+      <li>Where the correlation id lives: a Case field, a log key, a header, or several.</li>
+      <li>The exact Mule deployment name and Anypoint org, environment and Private Space ids.</li>
+      <li>The CloudHub 2.0 logs endpoint, its retention and filters, and whether inbound payloads are logged.</li>
+      <li>The Salesforce sign-in flow for the integration user; JWT bearer is preferred.</li>
+      <li>Real log wording for the seed runbook entries.</li>
+      <li>How the Priority Queue selects cases.</li>
+      <li>Approval of Anthropic as the live provider.</li>
+      <li>The live embeddings provider, decided by eval results.</li>
+      <li>Which Case fields count as personal data for redaction.</li>
+      <li>The real HubSpot ticket id format.</li>
+      <li>Real sync-status picklist values.</li>
+      <li>Approval for LangSmith to receive redacted case data.</li>
+    </ol>
+
+    <h2 id="limitations">Limitations</h2>
+    <ul>
+      <li>Mock-mode tests prove routing, tool contracts, scoping, limits, tracing and retrieval. The model's replies in mock mode are scripted, so they do not show that a real model reasons well. Phase 5 evals measure that.</li>
+      <li>Live mode has never run. The live tool modules are stubs, and Salesforce field names are placeholders.</li>
+      <li>Retrieval in mock mode is lexical. It works for error codes and the seven entries; semantic embeddings may be needed as the runbook grows.</li>
+      <li>A timed-out tool keeps running in its worker thread until it returns, because Python cannot stop a thread. Live tools must set HTTP-level timeouts.</li>
+    </ul>
+
+    <h2 id="refs">See also</h2>
+    <div class="cols refs">
+      <ul>
+        <li><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/README.md">README</a>, with the demo transcript</li>
+        <li><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/HANDOFF.md">HANDOFF</a>, the work-laptop kickoff</li>
+        <li><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/CLAUDE.md">CLAUDE.md</a>, project memory</li>
+      </ul>
+      <ul>
+        <li><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/roadmap.md">Roadmap</a></li>
+        <li><a href="https://github.com/dustin-swayze/coachnet-triage-agent/blob/main/docs/glossary.md">Glossary</a></li>
+        <li><a href="https://github.com/dustin-swayze/coachnet-triage-agent/tree/main/docs/runbook">Runbook</a></li>
+      </ul>
+    </div>
+
+    <footer>
+      This page describes a project that contains synthetic data only. Repository links point to a private bridge repository and require access. Source of this page: <code>docs/overview.html</code> in the repository.
+    </footer>
+  </article>
+</div>

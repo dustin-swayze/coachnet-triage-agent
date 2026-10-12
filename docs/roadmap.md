@@ -7,7 +7,7 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 - [x] Part B: mock tools + fixtures, graph wired with limits and tracing, scripted LLM + hashing embeddings, indexer, CLI, 138 tests, demo transcript (Opus 5.5, with Sonnet/Haiku subagents)
 - [x] Part C: HANDOFF.md, roadmap/CLAUDE.md updates, bridge-repo push commands (Opus 5.5)
 
-## Observability (added 2026-10-12)
+## Observability (added 2026-10-11)
 - [x] Optional LangSmith tracing behind `LANGSMITH_ENABLED` (off by default, ADR 0006)
 - [ ] Local trace viewer / `triage stats` over the JSONL files (cost, latency, outcomes)
 - [ ] Work dashboard: ship JSONL run summaries to Azure Monitor / Log Analytics (with Phase 6 hosting)

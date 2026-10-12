@@ -254,6 +254,7 @@ scenario per seed runbook entry, plus the LangSmith flag (off wins, one trace pe
 redaction on upload).
 
 ## Docs
+- [docs/overview.html](docs/overview.html) - wiki-style architecture overview and catalogue of everything built
 - [docs/decisions/](docs/decisions/) - ADRs
 - [docs/runbook/](docs/runbook/) - known failure modes (RAG source)
 - [docs/glossary.md](docs/glossary.md)

@@ -1,6 +1,6 @@
 # ADR 0006: JSONL traces are the record; LangSmith is optional and off by default
 
-**Status:** accepted (2026-10-12)
+**Status:** accepted (2026-10-11)
 
 ## Context
 Logging and usage metrics matter for this project: the director needs to see exactly
