@@ -1,0 +1,40 @@
+{
+  "healthy": {
+    "status": "RUNNING",
+    "replicas_desired": 2,
+    "replicas_running": 2,
+    "last_deployed_minutes_ago": 4320,
+    "recent_restarts": 0,
+    "detail": null
+  },
+  "down": {
+    "status": "STOPPED",
+    "replicas_desired": 2,
+    "replicas_running": 0,
+    "last_deployed_minutes_ago": 1560,
+    "recent_restarts": 0,
+    "detail": "Application stopped; 0 of 2 replicas running"
+  },
+  "deploying": {
+    "status": "DEPLOYING",
+    "replicas_desired": 2,
+    "replicas_running": 1,
+    "last_deployed_minutes_ago": 2,
+    "recent_restarts": 0,
+    "detail": "Rolling deployment in progress"
+  },
+  "restart_loop": {
+    "status": "RUNNING",
+    "replicas_desired": 2,
+    "replicas_running": 2,
+    "last_deployed_minutes_ago": 2880,
+    "recent_restarts": 5,
+    "detail": "replica OOMKilled"
+  },
+  "status_error": {
+    "raises": {
+      "status_code": 401,
+      "message": "Anypoint auth failed"
+    }
+  }
+}
