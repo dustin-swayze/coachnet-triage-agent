@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -46,6 +47,18 @@ class Settings(BaseSettings):
     tool_timeout_seconds: float = Field(default=15.0, gt=0)
     run_budget_seconds: float = Field(default=60.0, gt=0)
     trace_dir: str = "traces"
+
+    # ---- runbook / retrieval (ADR 0004) ---------------------------------------
+    runbook_dir: str = "docs/runbook"
+    index_dir: str = "data/index"
+    # hashing = deterministic local bag-of-words embedder (free, lexical, used in mock).
+    # TODO(dustin): pick a live embeddings provider (Anthropic has no embeddings API;
+    # options: keep hashing for a ~20-entry runbook, Voyage, or OpenAI per TrxNow policy).
+    embeddings_provider: Literal["hashing", "openai", "voyage"] = "hashing"
+
+    # ---- mock-mode knobs (ignored in live mode) ------------------------------
+    # healthy | down | deploying | restart_loop | status_error
+    mock_app_state: str = "healthy"
 
     # ---- salesforce (read-only integration user) ------------------------------
     sf_instance_url: str | None = None
