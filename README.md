@@ -10,7 +10,7 @@ a MuleSoft app on CloudHub 2.0.
 > confidence score. Every tool call is traced to a JSONL file you can audit.
 
 ## Status
-Session 1 scaffold. Mock mode only. No real credentials, data, or log formats are in
+Session 1 complete: working agent in mock mode, 138 passing tests. Mock mode only. No real credentials, data, or log formats are in
 this repo. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Why it's built this way (short version)
@@ -92,14 +92,147 @@ proves the *plumbing* produces the right diagnosis for the right evidence. It do
 prove a real model reasons correctly. That is what Phase 5 evals are for.
 
 ## Demo transcript
-_(Pasted here at the end of Session 1 Part B.)_
+Mock mode, recorded 2026-10-11 with `uv run python -m triage ask "..."`. The last
+question was run with `MOCK_APP_STATE=down`. Timestamps are relative to the run.
+
+```text
+you> Is the Coach Net app up?
+
+The Coach Net Mule app looks healthy: coachnet-saas-api: RUNNING (2/2 replicas, 0 restarts in 60m).
+
+Evidence:
+  - [check_mule_app_status] coachnet-saas-api: RUNNING (2/2 replicas, 0 restarts in 60m)
+  - [parse_request] intent=HEALTH_ONLY case=- ticket=- corr=-
+
+Steps used: 1/8   Run: 0a2f6ce2ba62
+
+(trace: traces/0a2f6ce2ba62.jsonl  |  0.01s)
+
+--------------------------------------------------------------------------------
+
+you> Case 00412345 looks like a duplicate, what happened?
+
+Diagnosis: Duplicate Case created without the redispatch flag.
+
+Likely cause: The inbound flow did not treat the second message as a retry/update. Usual reasons:
+HubSpot re-fired the webhook (timeout on first ack), or the upsert key was missing or
+blank on the second payload, so the flow fell back to insert. A legitimate re-send
+should carry the redispatch flag; its absence means this is an unintended duplicate.
+
+Suggested fix:
+  1. (WRITE, human) Close the newer Case as duplicate and link it to the original.
+  2. If the upsert key was blank: raise with Coach Net; the payload must include the
+     ticket id in the agreed field (see API contract). Add to failure mode cnet-003 evidence.
+  3. If HubSpot retried after an ack timeout: check Mule app response times around that
+     time; consider idempotency on ticket id in the inbound flow (code change, PR to `test`).
+
+Confidence: 61%   Runbook: cnet-001   (fix needs a human: it includes write actions)
+
+Evidence:
+  - [check_mule_app_status] coachnet-saas-api: RUNNING (2/2 replicas, 0 restarts in 60m)
+  - [parse_request] intent=CASE_TRIAGE case=00412345 ticket=- corr=-
+  - [get_sf_case] Case 00412345 [CNET] status=New sync=SYNCED external_id=hs-55501 last_sync=2026-10-12T00:56:21+00:00 redispatch=False DUPLICATE_OF=00412301
+  - [search_mule_logs] 6 log entries (0 errors) for coachnet-saas-api; correlation ids: a1b2c3d4, e5f6a7b8
+  - [search_runbook] 3 runbook hits: cnet-001 (0.32), cnet-002 (0.23), cnet-004 (0.16)
+
+Steps used: 4/8   Run: 80519d400ced
+
+(trace: traces/80519d400ced.jsonl  |  0.09s)
+
+--------------------------------------------------------------------------------
+
+you> HubSpot ticket hs-55777 failed on the send
+
+Diagnosis: Send failed because the inbound HubSpot payload does not match the API contract. Key log line: APIKIT:BAD_REQUEST required property 'serviceType' is null
+
+Likely cause: The payload violates the API contract: a required property is missing or null, an
+enum value is outside the agreed set (e.g. `priority = "Urgent"` where the contract
+says `High`), a date is in the wrong format, or a field was renamed on the HubSpot
+side.
+
+Suggested fix:
+  1. Send Coach Net the exact property and expected value/format from the contract.
+     They correct the ticket and re-send (with the redispatch flag if the Case already
+     exists; see cnet-001).
+  2. If the contract is wrong or the field is genuinely optional: update the RAML/schema
+     and the DataWeave default (code change, PR to `test`).
+
+Confidence: 65%   Runbook: cnet-003
+
+Evidence:
+  - [check_mule_app_status] coachnet-saas-api: RUNNING (2/2 replicas, 0 restarts in 60m)
+  - [parse_request] intent=CASE_TRIAGE case=- ticket=hs-55777 corr=-
+  - [get_sf_case] get_sf_case failed: NotFoundError: no CNET case found for hs-55777
+  - [search_mule_logs] 4 log entries (2 errors) for coachnet-saas-api; correlation ids: bad0cafe
+  - [search_runbook] 3 runbook hits: cnet-003 (0.39), cnet-005 (0.15), cnet-002 (0.14)
+
+Steps used: 4/8   Run: 5e5dd6ab6b32
+
+(trace: traces/5e5dd6ab6b32.jsonl  |  0.09s)
+
+--------------------------------------------------------------------------------
+
+you> Look at case 00499999
+
+I found nothing for 00499999 in Coach Net (CNET) data:
+  - get_sf_case: NotFoundError: no CNET case found for 00499999
+  - search_mule_logs: NotFoundError: no log entries matched the given identifiers in the time window
+
+No diagnosis is possible without a case or log transaction. Check the number, that
+it is a Coach Net case, and the time window. If a lookup timed out or
+failed upstream, try again shortly.
+
+Evidence:
+  - [check_mule_app_status] coachnet-saas-api: RUNNING (2/2 replicas, 0 restarts in 60m)
+  - [parse_request] intent=CASE_TRIAGE case=00499999 ticket=- corr=-
+  - [get_sf_case] get_sf_case failed: NotFoundError: no CNET case found for 00499999
+  - [search_mule_logs] search_mule_logs failed: NotFoundError: no log entries matched the given identifiers in the time window
+
+Steps used: 3/8   Run: c112805ccbab
+
+(trace: traces/c112805ccbab.jsonl  |  0.01s)
+
+--------------------------------------------------------------------------------
+
+you> Case 00412400 didn't sync
+
+ALERT: the Coach Net Mule app is not healthy.
+  coachnet-saas-api: STOPPED (0/2 replicas, 0 restarts in 60m)
+  Last deploy: 2026-10-11T00:56:28+00:00
+  Detail: Application stopped; 0 of 2 replicas running
+
+Any sync problem reported right now is most likely caused by this. Case lookup was
+skipped. Next step (human, in Runtime Manager): check deployment logs, then
+redeploy or restart. See runbook cnet-007.
+
+Evidence:
+  - [check_mule_app_status] coachnet-saas-api: STOPPED (0/2 replicas, 0 restarts in 60m)
+
+Steps used: 1/8   Run: 6fe762df78f3
+
+(trace: traces/6fe762df78f3.jsonl  |  0.01s)
+```
+
+### What the trace shows for the duplicate-case run
+Tool calls and run boundaries from `traces/<run_id>.jsonl` (node and LLM events omitted
+here; they are in the file). Inputs are redacted before they are written.
+
+```json
+{"run_id": "80519d400ced", "event": "run_start", "request": "Case 00412345 looks like a duplicate, what happened?", "mode": "mock", "partner": "CNET", "step_cap": 8, "run_budget_seconds": 60.0}
+{"event": "tool_call", "tool": "check_mule_app_status", "inputs": {"restart_window_minutes": 60}, "output_summary": "coachnet-saas-api: RUNNING (2/2 replicas, 0 restarts in 60m)", "latency_ms": 0, "error": null}
+{"event": "tool_call", "tool": "get_sf_case", "inputs": {"case_number": "00412345", "external_id": null}, "output_summary": "Case 00412345 [CNET] status=New sync=SYNCED external_id=hs-55501 last_sync=2026-10-12T00:56:21+00:00 redispatch=False DUPLICATE_OF=00412301", "latency_ms": 0, "error": null}
+{"event": "tool_call", "tool": "search_mule_logs", "inputs": {"correlation_id": "e5f6a7b8", "case_number": "00412345", "external_id": "hs-55501", "start": "2026-10-11T02:56:21.661468Z", "end": "2026-10-12T02:56:21.661468Z", "max_entries": 200}, "output_summary": "6 log entries (0 errors) for coachnet-saas-api; correlation ids: a1b2c3d4, e5f6a7b8", "latency_ms": 0, "error": null}
+{"event": "tool_call", "tool": "search_runbook", "inputs": {"query": "Case 00412345 looks like a duplicate, what happened? . sync status SYNCED . duplicate of 00412301, same HubSpot ticket created twice, redispatch False . no errors in logs, responded 200 to HubSpot", "k": 3}, "output_summary": "3 runbook hits: cnet-001 (0.32), cnet-002 (0.23), cnet-004 (0.16)", "latency_ms": 77, "error": null}
+{"run_id": "80519d400ced", "event": "run_end", "elapsed_ms": 93, "steps_used": 4, "incomplete": false, "incomplete_reason": null, "matched_runbook_ids": ["cnet-001"], "confidence": 0.61}
+```
 
 ## Tests
 ```bash
-uv run pytest
+uv run pytest -q        # 138 tests, ~4s, mock mode, no network
 ```
-Covers: health-check short-circuit, step-cap behaviour, fail-closed scoping, tool error
-handling, trace redaction, and one scenario per seed runbook entry.
+Covers: health-check short-circuit, step cap and time budget, fail-closed scoping, tool
+error handling, trace redaction, the LLM guards, runbook loading and retrieval, and one
+scenario per seed runbook entry.
 
 ## Docs
 - [docs/decisions/](docs/decisions/) - ADRs
