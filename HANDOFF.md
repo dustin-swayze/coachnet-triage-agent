@@ -155,7 +155,7 @@ Every step: **Shell: Git Bash** unless marked PowerShell. Directory stated per s
 1. **Clone** (Git Bash, any parent folder, e.g. `/c/Projects`):
    ```bash
    mkdir -p /c/Projects && cd /c/Projects
-   git clone https://github.com/<personal-account>/coachnet-triage-agent.git
+   git clone https://github.com/Dustin-Swayze/coachnet-triage-agent.git
    cd coachnet-triage-agent
    git checkout feature/scaffold   # main holds the same commits; work continues on feature branches
    ```
