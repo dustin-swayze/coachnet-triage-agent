@@ -135,10 +135,17 @@ class CaseRecord(_Model):
 
     @property
     def summary(self) -> str:
+        last_sync = self.last_sync_at.isoformat(timespec="seconds") if self.last_sync_at else "-"
         return (
             f"Case {self.case_number} [{self.partner_code}] status={self.status} "
             f"sync={self.sync_status} external_id={self.external_id or '-'} "
-            f"last_sync={self.last_sync_at.isoformat() if self.last_sync_at else '-'}"
+            f"last_sync={last_sync}"
+            + (f" redispatch={self.redispatch}" if self.redispatch is not None else "")
+            + (
+                f" DUPLICATE_OF={self.duplicate_of_case_number}"
+                if self.duplicate_of_case_number
+                else ""
+            )
         )
 
 
@@ -182,7 +189,9 @@ class LogEntry(_Model):
     message: str
     correlation_id: str | None = None
     flow_name: str | None = None
-    error_type: str | None = Field(default=None, description="e.g. HTTP:CONNECTIVITY, MULE:EXPRESSION")
+    error_type: str | None = Field(
+        default=None, description="e.g. HTTP:CONNECTIVITY, MULE:EXPRESSION"
+    )
     payload_excerpt: str | None = Field(default=None, max_length=4000)
 
 
@@ -244,6 +253,8 @@ class RunbookSearchResult(_Model):
 # ---------------------------------------------------------------------------
 class ToolErrorRecord(_Model):
     tool: str
-    error_type: Literal["ScopeError", "NotFoundError", "UpstreamError", "ToolTimeoutError", "ToolError"]
+    error_type: Literal[
+        "ScopeError", "NotFoundError", "UpstreamError", "ToolTimeoutError", "ToolError"
+    ]
     message: str
     retryable: bool = False

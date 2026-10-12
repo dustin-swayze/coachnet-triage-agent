@@ -11,7 +11,7 @@ Why a TypedDict for the state and Pydantic for the values
 from __future__ import annotations
 
 import operator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Annotated, Any, TypedDict
 from uuid import uuid4
@@ -109,7 +109,7 @@ class TriageState(TypedDict, total=False):
 
 
 def initial_state(user_request: str, *, step_cap: int, run_budget_seconds: float) -> TriageState:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return TriageState(
         run_id=uuid4().hex[:12],
         user_request=user_request,
