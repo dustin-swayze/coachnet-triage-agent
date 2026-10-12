@@ -31,9 +31,10 @@ from pydantic import BaseModel, SecretStr
 REDACTED = "***"
 MAX_STRING = 500
 
-# Keys whose values are always secret, whatever they contain.
+# Keys whose values are always secret, whatever they contain. "token(?!s)" catches
+# access_token / id_token but not usage counters like input_tokens / total_tokens.
 _SECRET_KEY = re.compile(
-    r"(token|secret|password|passwd|api[_-]?key|authorization|cookie|session[_-]?id|"
+    r"(token(?!s)|secret|password|passwd|api[_-]?key|authorization|cookie|session[_-]?id|"
     r"client[_-]?secret|private[_-]?key)",
     re.IGNORECASE,
 )

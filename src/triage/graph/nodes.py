@@ -272,15 +272,20 @@ class Nodes:
         ]
         return update
 
-    @staticmethod
-    def _guard_parsed(parsed: ParsedRequest, text: str) -> ParsedRequest:
-        """Drop identifiers that do not appear verbatim in the user's text."""
+    def _guard_parsed(self, parsed: ParsedRequest, text: str) -> ParsedRequest:
+        """Drop identifiers that do not appear verbatim in the user's text, then fill any
+        gap from deterministic regex extraction. An invented case number is never looked
+        up, and a real one the model missed or mangled is not lost."""
         lowered = text.lower()
         data = parsed.model_dump()
+        fallback = regex_parse(text)
         for field in ("case_number", "external_id", "correlation_id"):
             value = data.get(field)
             if value and str(value).lower() not in lowered:
+                self.tracer.event("guard", node="parse_request", dropped_field=field, value=value)
                 data[field] = None
+            if not data.get(field) and fallback.get(field):
+                data[field] = fallback[field]
         fixed = ParsedRequest.model_validate(data)
         if fixed.has_case_reference:
             fixed.intent = RequestIntent.CASE_TRIAGE
