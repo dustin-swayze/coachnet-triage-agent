@@ -10,7 +10,7 @@ a MuleSoft app on CloudHub 2.0.
 > confidence score. Every tool call is traced to a JSONL file you can audit.
 
 ## Status
-Session 1 complete: working agent in mock mode, 138 passing tests. Mock mode only. No real credentials, data, or log formats are in
+Session 1 complete: working agent in mock mode, 145 passing tests. Mock mode only. No real credentials, data, or log formats are in
 this repo. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Why it's built this way (short version)
@@ -25,6 +25,8 @@ this repo. See [docs/roadmap.md](docs/roadmap.md).
   API key. ([ADR 0003](docs/decisions/0003-mock-live-tools-and-fake-llm.md))
 - **Markdown runbook is the source of truth.** The vector index is derived and
   rebuildable. ([ADR 0004](docs/decisions/0004-markdown-runbook-source-of-truth.md))
+- **Local audit trail, optional hosted tracing.** JSONL traces are always written;
+  LangSmith is behind a flag, off by default. ([ADR 0006](docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md))
 - **Partner-generic, fail-closed scoping.** Tools filter on a configured partner code
   and refuse to run unscoped. ([ADR 0005](docs/decisions/0005-partner-scoping-fail-closed.md))
 
@@ -83,6 +85,22 @@ Mock fixtures you can ask about:
 ```bash
 MOCK_APP_STATE=down uv run python -m triage ask "Case 00412345 didn't sync"
 uv run python -m triage health
+```
+
+## Observability
+- **JSONL traces (always on).** `traces/<run_id>.jsonl`: every node, tool call, and
+  model call with redacted inputs, output summary, latency, errors, and token usage.
+  Local, and the audit record. ([ADR 0006](docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md))
+- **LangSmith (optional, off by default).** Hosted run trees, cost and latency
+  dashboards, and eval tooling. Free tier covers this project. It uploads redacted
+  prompts and outputs to LangChain's cloud, so enable it only where that is approved.
+
+```bash
+# Git Bash, repo root. Get a key at smith.langchain.com, then in .env:
+#   LANGSMITH_ENABLED=true
+#   LANGSMITH_API_KEY=lsv2_...
+uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"
+# The run appears in project "partner-triage", tagged with the same run id as the JSONL file.
 ```
 
 ## What mock mode proves, and what it doesn't
@@ -228,11 +246,12 @@ here; they are in the file). Inputs are redacted before they are written.
 
 ## Tests
 ```bash
-uv run pytest -q        # 138 tests, ~4s, mock mode, no network
+uv run pytest -q        # 145 tests, ~4s, mock mode, no network
 ```
 Covers: health-check short-circuit, step cap and time budget, fail-closed scoping, tool
 error handling, trace redaction, the LLM guards, runbook loading and retrieval, and one
-scenario per seed runbook entry.
+scenario per seed runbook entry, plus the LangSmith flag (off wins, one trace per run,
+redaction on upload).
 
 ## Docs
 - [docs/decisions/](docs/decisions/) - ADRs

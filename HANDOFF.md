@@ -84,6 +84,7 @@ Key files: `src/triage/graph/nodes.py` (all node logic, limits, guards),
 - [ADR 0003](docs/decisions/0003-mock-live-tools-and-fake-llm.md): mock/live tool interface, node-keyed scripted model, hashing embeddings
 - [ADR 0004](docs/decisions/0004-markdown-runbook-source-of-truth.md): markdown runbook is the source of truth, vector index is derived
 - [ADR 0005](docs/decisions/0005-partner-scoping-fail-closed.md): partner-generic, fail-closed scoping
+- [ADR 0006](docs/decisions/0006-observability-jsonl-plus-optional-langsmith.md): JSONL traces are the record; LangSmith optional, off by default
 
 ---
 
@@ -101,7 +102,7 @@ Key files: `src/triage/graph/nodes.py` (all node logic, limits, guards),
 - Seven seed runbook entries in `docs/runbook/` (synthetic log shapes; see open items).
 
 ### Tested
-`uv run pytest -q`: **138 passed in ~4s** (Windows 11, Python 3.12.1, mock mode, no
+`uv run pytest -q`: **145 passed in ~4s** (Windows 11, Python 3.12.1, mock mode, no
 network). `uv run ruff check src tests`: clean.
 
 | Module | Tests | Protects |
@@ -113,6 +114,7 @@ network). `uv run ruff check src tests`: clean.
 | `test_trace_redaction.py` | 34 | secrets, tokens, JWTs, PII keys scrubbed; trace file structure; usage counts survive |
 | `test_scenarios.py` | 19 | each seed scenario reaches the right runbook entry; prompt-injection framing present |
 | `test_runbook.py` | 28 | loader validation, deterministic embeddings, each entry retrieves itself |
+| `test_langsmith.py` | 7 | LangSmith off by default and off wins over stray env; on = one nested trace per run; redaction on upload |
 
 Two real bugs were found by the tests and fixed in Session 1: token-usage counts were
 being redacted, and the parse guard lost a real case number when the model invented
@@ -145,6 +147,7 @@ Search them with `grep -rn "TODO(dustin)" src docs .env.example`.
 | 10 | `tracing.py` `PII_KEYS` | Which Case fields are PII, so traces and prompts redact them. |
 | 11 | `llm.py` `TICKET_RE`, `schemas/tools.py` | Real HubSpot ticket id format (fixtures use synthetic `hs-NNNNN`). |
 | 12 | `schemas/tools.py` `SyncStatusValue` | Map logical sync states to the real picklist values. |
+| 13 | `.env` `LANGSMITH_ENABLED` | Optional LangSmith tracing is built and off by default (ADR 0006). Get approval before enabling it with real case data; otherwise keep it off or evaluate self-hosted Langfuse. |
 
 ---
 
@@ -268,7 +271,7 @@ try `claude-haiku-5-5` once Phase 5 evals exist and keep whichever passes.
 
 - [ ] Clone, `uv sync`, `cp .env.example .env`, `uv run pytest -q` passes (section 5).
 - [ ] Mock demo runs: `uv run python -m triage ask "Case 00412345 looks like a duplicate, what happened?"`.
-- [ ] Team lead confirms GitHub location and AI-tool policy; push to TrxNow GitHub; delete the personal bridge repo (section 6).
+- [ ] Team lead confirms GitHub location, AI-tool policy, and whether LangSmith may receive redacted case data; push to TrxNow GitHub; delete the personal bridge repo (section 6).
 - [ ] Read the Coach Net API contract and XMLs; write the real field mapping into `.env.example` and `config.py`; close open items 1, 2, 11, 12.
 - [ ] Request the sandbox read-only integration user and Anypoint view-only connected app.
 - [ ] Phase 2: live `get_sf_case` against the sandbox, with its security checks and acceptance criteria.

@@ -222,8 +222,15 @@ def _mock_diagnose(messages: list[BaseMessage], kwargs: dict[str, Any]) -> AIMes
             },
         )
     top = hits[0]
-    typed = [e for e in bad if e.get("error_type")]
-    key_entry = typed[0] if typed else (bad[-1] if bad else None)
+    # Most telling line: first typed ERROR, else first ERROR, else first typed WARN.
+    errors_ = [e for e in bad if e.get("level") == "ERROR"]
+    ranked = (
+        [e for e in errors_ if e.get("error_type")]
+        + errors_
+        + [e for e in bad if e.get("error_type")]
+        + bad
+    )
+    key_entry = ranked[0] if ranked else None
     key_line = ""
     if key_entry:
         msg, etype = key_entry.get("message", ""), key_entry.get("error_type") or ""

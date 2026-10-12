@@ -42,6 +42,7 @@ from triage.graph.nodes import (
     route_after_health,
     route_after_parse,
 )
+from triage.observability import langsmith_run
 from triage.schemas.state import TriageState, initial_state
 from triage.tools.base import ToolSet
 from triage.tracing import Tracer
@@ -136,10 +137,20 @@ def run_triage(
         partner=settings.partner_code,
         step_cap=settings.step_cap,
         run_budget_seconds=settings.run_budget_seconds,
+        # Recorded so the audit trail says whether data also went to LangSmith (ADR 0006).
+        langsmith_project=settings.langsmith_project if settings.langsmith_enabled else None,
     )
     app = build_graph(tools, llm, tracer, settings)
     started = time.perf_counter()
-    final: TriageState = app.invoke(state, config={"recursion_limit": settings.step_cap * 3 + 10})
+    with langsmith_run(settings, run_id=state["run_id"]):
+        final: TriageState = app.invoke(
+            state,
+            config={
+                "recursion_limit": settings.step_cap * 3 + 10,
+                "run_name": "triage",
+                "metadata": {"triage_run_id": state["run_id"]},
+            },
+        )
     elapsed = time.perf_counter() - started
     diag = final.get("diagnosis")
     tracer.event(

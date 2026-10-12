@@ -38,6 +38,8 @@ _LEAKY_PREFIXES = (
     "TRACE_DIR",
     "RUNBOOK_DIR",
     "MULE_APP_NAME",
+    "LANGSMITH_",
+    "LANGCHAIN_",
 )
 
 

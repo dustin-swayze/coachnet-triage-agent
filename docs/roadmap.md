@@ -7,6 +7,11 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 - [x] Part B: mock tools + fixtures, graph wired with limits and tracing, scripted LLM + hashing embeddings, indexer, CLI, 138 tests, demo transcript (Opus 5.5, with Sonnet/Haiku subagents)
 - [x] Part C: HANDOFF.md, roadmap/CLAUDE.md updates, bridge-repo push commands (Opus 5.5)
 
+## Observability (added 2026-10-12)
+- [x] Optional LangSmith tracing behind `LANGSMITH_ENABLED` (off by default, ADR 0006)
+- [ ] Local trace viewer / `triage stats` over the JSONL files (cost, latency, outcomes)
+- [ ] Work dashboard: ship JSONL run summaries to Azure Monitor / Log Analytics (with Phase 6 hosting)
+
 ## Phase 2 - Live `get_sf_case` against a sandbox (work laptop)  <- NEXT
 - [ ] Read the API contract and XMLs in the work repo; replace placeholder field names
 - [ ] Read-only integration user + permission set (Case read, specific fields only)
@@ -66,3 +71,4 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` deferred.
 | 10 | `tracing.py` `PII_KEYS` | Confirm which Case fields are PII (contact name, phone, email, location, VIN?) so traces and prompts redact them. |
 | 11 | `llm.py` `TICKET_RE` | Real HubSpot ticket id format (fixtures use a synthetic `hs-NNNNN`). Update the regex and the `GetCaseRequest` validation. |
 | 12 | `schemas/tools.py` `SyncStatusValue` | Map logical sync states to the real picklist values on Case. |
+| 13 | `.env` `LANGSMITH_ENABLED` | Approval to send redacted prompts/outputs to LangSmith (LangChain cloud, US or EU) with real case data. If not approved, keep it off or evaluate self-hosted Langfuse. |

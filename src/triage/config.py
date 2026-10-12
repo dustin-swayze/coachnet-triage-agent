@@ -14,7 +14,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,6 +60,16 @@ class Settings(BaseSettings):
     # healthy | down | deploying | restart_loop | status_error
     mock_app_state: str = "healthy"
 
+    # ---- LangSmith (optional observability, OFF by default; ADR 0006) ---------
+    # Our JSONL traces are the system of record and never leave the machine. LangSmith
+    # adds a hosted UI, cost/latency dashboards, and eval tooling, but it sends redacted
+    # prompts and outputs to LangChain's cloud. Turn it on only where that is approved.
+    langsmith_enabled: bool = False
+    langsmith_api_key: SecretStr | None = None
+    langsmith_project: str = "partner-triage"
+    # US: https://api.smith.langchain.com   EU: https://eu.api.smith.langchain.com
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
+
     # ---- salesforce (read-only integration user) ------------------------------
     sf_instance_url: str | None = None
     sf_client_id: str | None = None
@@ -90,6 +100,12 @@ class Settings(BaseSettings):
         if not v.strip():
             raise ValueError("must not be blank (fail-closed scoping, ADR 0005)")
         return v.strip()
+
+    @model_validator(mode="after")
+    def _langsmith_needs_key(self) -> Settings:
+        if self.langsmith_enabled and not self.langsmith_api_key:
+            raise ValueError("LANGSMITH_ENABLED=true requires LANGSMITH_API_KEY")
+        return self
 
     @property
     def is_mock(self) -> bool:

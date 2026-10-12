@@ -16,6 +16,7 @@ Conventions
 
 from __future__ import annotations
 
+import contextvars
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -25,6 +26,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langsmith import traceable
 from pydantic import ValidationError
 
 from triage.config import Settings
@@ -133,7 +135,10 @@ class Nodes:
         timeout = max(0.01, min(self.settings.tool_timeout_seconds, remaining))
         started = time.perf_counter()
         result, error = None, None
-        future = _POOL.submit(fn, request)
+        # traceable() is a no-op unless LangSmith is on (ADR 0006). copy_context() carries
+        # the parent run into the worker thread so the tool nests under its graph node.
+        traced = traceable(name=name, run_type="tool")(fn)
+        future = _POOL.submit(contextvars.copy_context().run, traced, request)
         try:
             result = future.result(timeout=timeout)
         except FutureTimeout:
@@ -167,7 +172,7 @@ class Nodes:
             self.tracer.event("limit_hit", limit="time_budget", before=f"llm:{node}")
             return None, err
         started = time.perf_counter()
-        future = _POOL.submit(call)
+        future = _POOL.submit(contextvars.copy_context().run, call)
         out, err = None, None
         try:
             out = future.result(timeout=remaining)
